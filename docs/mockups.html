@@ -1,0 +1,891 @@
+<title>LuneTube Direction Studies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+
+<style>
+/* ============================================================
+   LuneTube — Direction Studies
+   Single dark visual world (Lunegit language), painted explicitly.
+   Three identities switched via data-dir on .stage:
+     a = Atlas   — literal Lunegit, Swiss, dense, left rail
+     b = Cinema  — top-bar only, huge frames, per-video colour wash
+     c = Studio  — slim icon rail + ⌘K, editorial serif numerals
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+
+:root{
+  /* shared Lunegit-derived base (dark only) */
+  --void:#0a0d13;
+  --void-2:#0c1017;
+  --glass-1:rgba(255,255,255,.045);
+  --glass-2:rgba(255,255,255,.075);
+  --glass-3:rgba(255,255,255,.11);
+  --panel-ink:rgba(8,10,15,.55);
+  --stroke:rgba(255,255,255,.12);
+  --stroke-soft:rgba(255,255,255,.07);
+  --stroke-strong:rgba(255,255,255,.22);
+  --fg-1:rgba(255,255,255,.92);
+  --fg-2:rgba(255,255,255,.64);
+  --fg-3:rgba(255,255,255,.42);
+  --fg-4:rgba(255,255,255,.28);
+  --ok:#5cc98a; --warn:#e6b445; --err:#e2685f;
+  --sponsor:#43c39a;
+  --radius:14px; --radius-sm:9px;
+  --ease:cubic-bezier(.22,.61,.36,1);
+  color-scheme:dark;
+}
+
+/* ---------- per-direction design systems ---------- */
+.stage[data-dir="a"]{
+  --accent:#6ba6f5; --accent-ink:#0a1120; --glow:rgba(107,166,245,.30);
+  --wash-a:rgba(107,166,245,.24); --wash-b:rgba(70,110,190,.20);
+  --font-display:"Archivo","Inter",system-ui,sans-serif;
+  --font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --display-weight:700; --display-tracking:-.015em; --title-size:1.32rem;
+  --card-radius:10px; --rail-w:224px; --queue-w:320px;
+}
+.stage[data-dir="b"]{
+  --accent:#e7a24c; --accent-ink:#241403; --glow:rgba(231,162,76,.34);
+  --wash-a:rgba(231,162,76,.20); --wash-b:rgba(196,86,60,.16);
+  --font-display:"Bricolage Grotesque","Inter",system-ui,sans-serif;
+  --font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,monospace;
+  --display-weight:600; --display-tracking:-.02em; --title-size:1.9rem;
+  --card-radius:16px; --rail-w:0px; --queue-w:0px;
+}
+.stage[data-dir="c"]{
+  --accent:#5fd08a; --accent-ink:#07160e; --glow:rgba(95,208,138,.28);
+  --wash-a:rgba(95,208,138,.13); --wash-b:rgba(56,150,150,.14);
+  --font-display:"Fraunces",Georgia,serif;
+  --font-body:"Hanken Grotesk","Inter",system-ui,sans-serif;
+  --font-mono:"Space Mono",ui-monospace,monospace;
+  --display-weight:600; --display-tracking:-.005em; --title-size:1.5rem;
+  --card-radius:12px; --rail-w:68px; --queue-w:312px;
+}
+
+body{
+  background:var(--void);
+  color:var(--fg-1);
+  font-family:var(--font-body,"Inter",system-ui,sans-serif);
+  font-size:14px;line-height:1.5;
+  padding:22px;
+}
+@media (max-width:1000px){body{padding:10px}}
+
+/* ============================================================
+   Mockup shell (the frame around the app — clearly a control)
+   ============================================================ */
+.shell{max-width:1360px;margin:0 auto}
+.deck{
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:20px;
+  padding:4px 4px 20px;
+}
+.deck h1{
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:600;font-size:1.45rem;letter-spacing:-.01em;
+  color:var(--fg-1);
+}
+.deck h1 b{font-weight:600;font-style:italic;color:var(--fg-2)}
+.deck p{color:var(--fg-3);font-size:12.5px;max-width:52ch;line-height:1.55}
+
+.controls{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  padding:4px 4px 18px;
+}
+.seg{
+  display:flex;gap:2px;padding:3px;border-radius:11px;
+  background:rgba(255,255,255,.04);border:1px solid var(--stroke-soft);
+}
+.seg button{
+  font:inherit;font-size:12.5px;font-weight:500;
+  color:var(--fg-3);background:transparent;border:0;cursor:pointer;
+  padding:7px 13px;border-radius:8px;letter-spacing:.01em;
+  transition:color .18s,background .18s;
+}
+.seg button:hover{color:var(--fg-1)}
+.seg button[aria-pressed="true"]{color:var(--fg-1);background:rgba(255,255,255,.09)}
+.seg .k{font-family:var(--font-mono,monospace);font-size:11px;opacity:.5;margin-left:6px}
+.controls .note{
+  margin-left:auto;color:var(--fg-4);font-size:11.5px;
+  font-family:"JetBrains Mono",monospace;letter-spacing:.02em;
+}
+.dirline{
+  padding:0 4px 16px;color:var(--fg-3);font-size:12.5px;line-height:1.6;
+  max-width:80ch;
+}
+.dirline strong{color:var(--accent-line,var(--fg-1));font-weight:600}
+
+/* ============================================================
+   Stage — the app window
+   ============================================================ */
+.stage{
+  position:relative;isolation:isolate;
+  border-radius:20px;overflow:hidden;
+  border:1px solid var(--stroke);
+  height:min(78vh,840px);min-height:600px;
+  background:var(--void-2);
+  box-shadow:0 40px 120px -30px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.4);
+}
+.dir-a-accent{color:#6ba6f5}
+.dir-b-accent{color:#e7a24c}
+.dir-c-accent{color:#5fd08a}
+
+/* living backdrop */
+.backdrop{position:absolute;inset:0;z-index:0;overflow:hidden}
+.backdrop::before,.backdrop::after{
+  content:"";position:absolute;border-radius:50%;
+  filter:blur(64px);opacity:1;
+  transition:background 1.1s var(--ease);
+}
+.backdrop::before{
+  width:60%;height:70%;left:-8%;top:-18%;
+  background:radial-gradient(circle at 40% 40%,var(--wash-a),transparent 70%);
+  animation:drift1 34s var(--ease) infinite alternate;
+}
+.backdrop::after{
+  width:64%;height:72%;right:-12%;bottom:-24%;
+  background:radial-gradient(circle at 60% 60%,var(--wash-b),transparent 70%);
+  animation:drift2 42s var(--ease) infinite alternate;
+}
+.stage[data-dir="b"] .backdrop::before{left:12%;top:-30%;width:80%;height:90%;opacity:1}
+.grain{
+  position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@keyframes drift1{to{transform:translate3d(8%,10%,0) scale(1.15)}}
+@keyframes drift2{to{transform:translate3d(-6%,-8%,0) scale(1.1)}}
+
+/* ============================================================
+   App layout
+   ============================================================ */
+.app{
+  position:absolute;inset:0;z-index:2;
+  display:grid;
+  grid-template-columns:var(--rail-w) minmax(0,1fr) var(--queue-w);
+  grid-template-rows:44px minmax(0,1fr);
+  grid-template-areas:"bar bar bar" "rail main queue";
+}
+
+/* --- title bar --- */
+.titlebar{
+  grid-area:bar;display:flex;align-items:center;gap:14px;
+  padding:0 16px;
+  border-bottom:1px solid var(--stroke-soft);
+  background:rgba(255,255,255,.02);
+  -webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);
+}
+.lights{display:flex;gap:8px}
+.lights i{width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.16)}
+.lights i:first-child{background:#e2685f55}
+.lights i:nth-child(2){background:#e6b44555}
+.lights i:nth-child(3){background:#5cc98a55}
+.wordmark{
+  font-family:var(--font-display);font-weight:var(--display-weight);
+  letter-spacing:var(--display-tracking);font-size:14.5px;
+}
+.wordmark span{color:var(--accent)}
+.stage[data-dir="c"] .wordmark{font-style:italic;font-weight:600}
+.titlebar .topsearch{
+  margin-left:auto;display:flex;align-items:center;gap:9px;
+  width:min(340px,38%);padding:7px 12px;border-radius:9px;
+  background:rgba(255,255,255,.05);border:1px solid var(--stroke-soft);
+  color:var(--fg-3);font-size:12.5px;
+}
+.stage[data-dir="a"] .titlebar .topsearch,
+.stage[data-dir="c"] .titlebar .topsearch{display:none}
+.titlebar .kbd{
+  margin-left:auto;display:none;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:8px;border:1px solid var(--stroke-soft);
+  background:rgba(255,255,255,.04);color:var(--fg-3);
+  font-family:var(--font-mono);font-size:11px;
+}
+.stage[data-dir="c"] .titlebar .kbd{display:flex}
+
+/* --- left rail --- */
+.rail{
+  grid-area:rail;overflow:hidden;
+  border-right:1px solid var(--stroke-soft);
+  background:rgba(255,255,255,.03);
+  -webkit-backdrop-filter:blur(30px) saturate(150%);
+  backdrop-filter:blur(30px) saturate(150%);
+  padding:14px 12px;display:flex;flex-direction:column;gap:3px;
+}
+.stage[data-dir="b"] .rail{display:none}
+.stage[data-dir="c"] .rail{padding:14px 0;align-items:center}
+.rail .grp{
+  font-size:10px;text-transform:uppercase;letter-spacing:.14em;
+  color:var(--fg-4);padding:14px 10px 6px;
+}
+.stage[data-dir="c"] .rail .grp{display:none}
+.nav{
+  display:flex;align-items:center;gap:12px;
+  padding:9px 10px;border-radius:9px;
+  color:var(--fg-2);font-size:13px;font-weight:500;cursor:pointer;
+  transition:background .16s,color .16s;white-space:nowrap;
+}
+.stage[data-dir="c"] .nav{width:44px;height:44px;justify-content:center;padding:0}
+.stage[data-dir="c"] .nav .lbl{display:none}
+.nav svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7}
+.nav:hover{background:rgba(255,255,255,.06);color:var(--fg-1)}
+.nav.on{background:rgba(255,255,255,.08);color:var(--fg-1)}
+.nav.on::before{
+  content:"";position:absolute;left:0;width:3px;height:18px;border-radius:2px;
+  background:var(--accent);box-shadow:0 0 12px var(--glow);
+}
+.stage[data-dir="a"] .nav{position:relative}
+.nav .soon{
+  margin-left:auto;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--fg-4);border:1px solid var(--stroke-soft);border-radius:5px;padding:2px 5px;
+}
+.rail .spacer{flex:1}
+
+/* --- main content --- */
+.main{grid-area:main;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+.main::-webkit-scrollbar{width:9px}
+.main::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:9px}
+.pad{padding:22px 26px 40px}
+.stage[data-dir="b"] .pad{padding:0 0 40px}
+
+/* command bar (Studio) */
+.cmdbar{
+  display:none;margin:0 0 20px;
+  align-items:center;gap:12px;padding:12px 16px;border-radius:12px;
+  background:var(--glass-1);border:1px solid var(--stroke);
+  -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+}
+.stage[data-dir="c"] .pad .cmdbar{display:flex}
+.cmdbar svg{width:17px;height:17px;stroke:var(--fg-3);fill:none;stroke-width:1.7}
+.cmdbar span{color:var(--fg-3);font-size:13px}
+.cmdbar .kbd{
+  margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--fg-3);
+  border:1px solid var(--stroke-soft);border-radius:6px;padding:4px 8px;
+}
+
+/* top bar (Cinema) */
+.cinebar{
+  display:none;position:sticky;top:0;z-index:5;
+  align-items:center;gap:18px;padding:16px 30px;
+  background:linear-gradient(var(--void-2),rgba(12,16,23,0));
+}
+.stage[data-dir="b"] .cinebar{display:flex}
+.cinebar .cine-search{
+  flex:1;max-width:440px;display:flex;align-items:center;gap:10px;
+  padding:10px 15px;border-radius:12px;
+  background:rgba(255,255,255,.06);border:1px solid var(--stroke);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  color:var(--fg-3);font-size:13px;
+}
+.cinebar .cine-search svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.cine-tabs{display:flex;gap:4px}
+.cine-tabs a{
+  color:var(--fg-3);font-size:13px;font-weight:500;padding:8px 12px;border-radius:8px;
+  cursor:pointer;transition:.15s;
+}
+.cine-tabs a:hover{color:var(--fg-1);background:rgba(255,255,255,.05)}
+.cine-tabs a.on{color:var(--fg-1)}
+.cinebar .av{
+  width:32px;height:32px;border-radius:50%;flex:none;
+  background:linear-gradient(135deg,var(--accent),#8b5cf6);
+}
+
+/* ============================================================
+   WATCH screen
+   ============================================================ */
+.screen{display:none}
+.screen.show{display:block}
+
+.watch-wrap{display:flex;flex-direction:column;gap:20px}
+.stage[data-dir="b"] .watch-wrap{gap:0}
+
+/* player */
+.player{
+  position:relative;border-radius:var(--radius);overflow:hidden;
+  background:#05070b;
+  aspect-ratio:16/9;
+  border:1px solid var(--stroke);
+  box-shadow:0 30px 80px -24px rgba(0,0,0,.7);
+}
+.stage[data-dir="b"] .player{border-radius:0;border-left:0;border-right:0;border-top:0}
+.player .frame{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(120% 90% at 50% 0%,rgba(255,255,255,.08),transparent 55%),
+    linear-gradient(160deg,#12213b 0%,#0b1220 45%,#0a0f18 100%);
+  display:grid;place-items:center;
+}
+.player .frame .viz{
+  width:62%;height:62%;border-radius:12px;
+  background:
+    repeating-linear-gradient(90deg,rgba(107,166,245,.5) 0 2px,transparent 2px 9px),
+    radial-gradient(circle at 30% 40%,rgba(231,162,76,.35),transparent 60%);
+  -webkit-mask:radial-gradient(circle at 50% 55%,#000 30%,transparent 72%);
+          mask:radial-gradient(circle at 50% 55%,#000 30%,transparent 72%);
+  opacity:.8;
+}
+.player .amb{position:absolute;inset:0;box-shadow:inset 0 0 120px 20px var(--glow);pointer-events:none}
+
+.player .ctl{
+  position:absolute;left:0;right:0;bottom:0;
+  padding:34px 18px 14px;
+  background:linear-gradient(transparent,rgba(4,6,10,.82));
+  display:flex;flex-direction:column;gap:9px;
+}
+.timeline{position:relative;height:20px;display:flex;align-items:center;cursor:pointer}
+.track{position:absolute;left:0;right:0;height:4px;border-radius:3px;background:rgba(255,255,255,.22)}
+.track .buf{position:absolute;left:0;width:64%;height:100%;border-radius:3px;background:rgba(255,255,255,.16)}
+.track .play{position:absolute;left:0;width:35%;height:100%;border-radius:3px;background:var(--accent);box-shadow:0 0 14px var(--glow)}
+.track .spon{position:absolute;left:52%;width:11%;height:100%;background:var(--sponsor);opacity:.9}
+.track .chap{position:absolute;top:-3px;width:2px;height:10px;background:rgba(255,255,255,.5);border-radius:2px}
+.timeline .head{
+  position:absolute;left:35%;width:13px;height:13px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 0 4px var(--glow),0 2px 6px rgba(0,0,0,.5);
+  transform:translateX(-50%);
+}
+.timeline .bubble{
+  position:absolute;left:35%;bottom:24px;transform:translateX(-50%);
+  width:132px;padding:6px;border-radius:8px;
+  background:rgba(8,10,15,.9);border:1px solid var(--stroke);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  opacity:0;transition:opacity .16s;pointer-events:none;
+}
+.timeline:hover .bubble{opacity:1}
+.timeline .bubble .thumb{height:66px;border-radius:5px;background:linear-gradient(150deg,#1b3050,#0c1220)}
+.timeline .bubble .t{font-family:var(--font-mono);font-size:10.5px;color:var(--fg-2);text-align:center;margin-top:4px}
+
+.ctl .row{display:flex;align-items:center;gap:16px}
+.ctl .row .ib{
+  background:transparent;border:0;color:var(--fg-1);cursor:pointer;
+  display:grid;place-items:center;padding:2px;
+}
+.ctl .row .ib svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}
+.ctl .row .ib.play svg{width:26px;height:26px;fill:currentColor;stroke:none}
+.ctl .time{font-family:var(--font-mono);font-size:12px;color:var(--fg-2);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.ctl .vol{width:76px;height:4px;border-radius:3px;background:rgba(255,255,255,.22);position:relative}
+.ctl .vol::after{content:"";position:absolute;left:0;width:62%;height:100%;border-radius:3px;background:rgba(255,255,255,.75)}
+.ctl .right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.ctl .pill{
+  font-family:var(--font-mono);font-size:11px;color:var(--fg-2);
+  border:1px solid var(--stroke-strong);border-radius:6px;padding:3px 7px;letter-spacing:.03em;
+}
+.ctl .pill.hot{color:var(--accent);border-color:var(--accent)}
+
+/* meta block */
+.meta{display:flex;flex-direction:column;gap:16px}
+.stage[data-dir="b"] .meta{padding:26px 30px 0}
+.stage[data-dir="a"] .vtitle{font-size:var(--title-size);line-height:1.28}
+.vtitle{
+  font-family:var(--font-display);font-weight:var(--display-weight);
+  letter-spacing:var(--display-tracking);
+  font-size:var(--title-size);line-height:1.22;color:var(--fg-1);
+  text-wrap:balance;max-width:30ch;
+}
+.stage[data-dir="c"] .vtitle{font-optical-sizing:auto}
+.subrow{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+.chan{display:flex;align-items:center;gap:11px}
+.chan .av{
+  width:42px;height:42px;border-radius:50%;flex:none;
+  background:conic-gradient(from 210deg,#6ba6f5,#5fd08a,#e7a24c,#6ba6f5);
+}
+.chan .nm{font-weight:600;font-size:13.5px}
+.chan .sub{color:var(--fg-3);font-size:11.5px;font-variant-numeric:tabular-nums}
+.btn{
+  font:inherit;font-size:12.5px;font-weight:600;letter-spacing:.01em;
+  color:var(--fg-1);cursor:pointer;
+  background:var(--glass-2);border:1px solid var(--stroke);
+  border-radius:8px;padding:9px 15px;
+  transition:background .16s,border-color .16s,transform .1s;
+}
+.btn:hover{background:var(--glass-3);border-color:var(--stroke-strong)}
+.btn:active{transform:translateY(1px)}
+.btn.solid{background:var(--fg-1);color:#0a0d13;border-color:transparent}
+.btn.solid:hover{background:#fff}
+.actions{margin-left:auto;display:flex;gap:8px}
+.actions .grp2{display:flex;background:var(--glass-2);border:1px solid var(--stroke);border-radius:8px;overflow:hidden}
+.actions .grp2 button{
+  background:transparent;border:0;color:var(--fg-1);font:inherit;font-size:12.5px;font-weight:600;
+  padding:9px 14px;cursor:pointer;display:flex;align-items:center;gap:7px;
+}
+.actions .grp2 button:hover{background:var(--glass-3)}
+.actions .grp2 button+button{border-left:1px solid var(--stroke)}
+.actions svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+.count{font-variant-numeric:tabular-nums;color:var(--fg-2)}
+
+.desc{
+  background:var(--glass-2);border:1px solid var(--stroke);
+  border-radius:var(--radius-sm);padding:14px 16px;
+  font-size:12.5px;color:var(--fg-2);line-height:1.62;
+}
+.desc .stat{color:var(--fg-1);font-weight:600;font-variant-numeric:tabular-nums}
+.desc a,.ts{color:var(--accent);cursor:pointer;font-family:var(--font-mono);font-size:11.5px}
+.desc .more{color:var(--fg-1);font-weight:600;cursor:pointer;display:inline-block;margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.chip{
+  font-size:11px;color:var(--fg-2);background:rgba(255,255,255,.05);
+  border:1px solid var(--stroke-soft);border-radius:20px;padding:4px 11px;
+}
+
+/* comments */
+.comm{display:flex;flex-direction:column;gap:18px;margin-top:6px}
+.stage[data-dir="b"] .comm{padding:0 30px}
+.comm h3{
+  font-family:var(--font-display);font-weight:var(--display-weight);
+  font-size:1rem;letter-spacing:var(--display-tracking);
+  display:flex;align-items:center;gap:10px;
+}
+.comm h3 .c{font-family:var(--font-mono);font-size:12px;color:var(--fg-3);font-weight:400}
+.comment{display:flex;gap:12px}
+.comment .av{width:34px;height:34px;border-radius:50%;flex:none;background:linear-gradient(135deg,#3a4a66,#20283a)}
+.comment .bd .h{display:flex;align-items:center;gap:8px;font-size:12px}
+.comment .bd .h b{font-weight:600}
+.comment .bd .h span{color:var(--fg-3)}
+.comment .bd p{font-size:12.5px;color:var(--fg-2);line-height:1.55;margin:4px 0 6px;max-width:64ch}
+.comment .bd .lk{display:flex;gap:14px;color:var(--fg-3);font-size:11px;font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   QUEUE / Up Next
+   ============================================================ */
+.queue{
+  grid-area:queue;overflow:hidden;
+  border-left:1px solid var(--stroke-soft);
+  background:rgba(255,255,255,.03);
+  -webkit-backdrop-filter:blur(30px) saturate(150%);
+  backdrop-filter:blur(30px) saturate(150%);
+  display:flex;flex-direction:column;
+}
+.stage[data-dir="b"] .queue{display:none}
+.queue .qh{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:15px 16px;border-bottom:1px solid var(--stroke-soft);
+}
+.queue .qh b{
+  font-family:var(--font-display);font-weight:var(--display-weight);
+  font-size:13px;letter-spacing:var(--display-tracking);
+}
+.stage[data-dir="c"] .queue .qh b{font-style:italic;font-weight:600;font-size:15px}
+.queue .qh .lp{font-family:var(--font-mono);font-size:10.5px;color:var(--fg-3);display:flex;align-items:center;gap:6px}
+.queue .qh .lp i{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--glow)}
+.qlist{overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:2px;scrollbar-width:thin}
+.qlist::-webkit-scrollbar{width:8px}
+.qlist::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:8px}
+.qitem{
+  display:grid;grid-template-columns:15px 108px 1fr;gap:10px;align-items:center;
+  padding:8px;border-radius:10px;cursor:pointer;transition:background .15s;
+}
+.qitem:hover{background:rgba(255,255,255,.05)}
+.qitem.on{background:rgba(255,255,255,.07)}
+.qitem .n{font-family:var(--font-mono);font-size:10.5px;color:var(--fg-4);text-align:center}
+.qitem.on .n{color:var(--accent)}
+.qthumb{
+  position:relative;aspect-ratio:16/9;border-radius:6px;overflow:hidden;
+  background:linear-gradient(145deg,#1c2c46,#0d1420);
+}
+.qthumb .d{
+  position:absolute;right:3px;bottom:3px;font-family:var(--font-mono);font-size:9px;
+  background:rgba(0,0,0,.8);color:#fff;padding:1px 4px;border-radius:3px;font-variant-numeric:tabular-nums;
+}
+.qthumb .live{background:var(--err);letter-spacing:.05em}
+.qmeta .t{font-size:12px;line-height:1.32;color:var(--fg-1);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.qmeta .s{font-size:10.5px;color:var(--fg-3);margin-top:3px;font-variant-numeric:tabular-nums}
+
+/* Cinema now-playing dock */
+.dock{
+  display:none;position:absolute;left:0;right:0;bottom:0;z-index:6;
+  align-items:center;gap:16px;padding:12px 24px;
+  background:rgba(8,10,15,.7);
+  -webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%);
+  border-top:1px solid var(--stroke);
+}
+.stage[data-dir="b"][data-screen="watch"] .dock{display:flex}
+.dock .mini{width:96px;aspect-ratio:16/9;border-radius:7px;background:linear-gradient(145deg,#1c2c46,#0d1420);flex:none}
+.dock .di{flex:1;min-width:0}
+.dock .di .t{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock .di .s{font-size:11px;color:var(--fg-3)}
+.dock .dc{display:flex;align-items:center;gap:14px}
+.dock .dc button{background:transparent;border:0;color:var(--fg-1);cursor:pointer;display:grid;place-items:center}
+.dock .dc svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8}
+.dock .dc .play svg{fill:currentColor;stroke:none;width:24px;height:24px}
+.dock .upnext{font-family:var(--font-mono);font-size:10px;color:var(--fg-3);text-align:right;white-space:nowrap}
+.dock .upnext b{color:var(--fg-1);display:block;font-weight:400;font-family:var(--font-body);font-size:11.5px;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+
+/* ============================================================
+   BROWSE screen
+   ============================================================ */
+.browse-head{display:flex;flex-direction:column;gap:16px;margin-bottom:22px}
+.stage[data-dir="b"] .browse-head{padding:8px 30px 0}
+.browse-head .q{
+  font-family:var(--font-display);font-weight:var(--display-weight);
+  letter-spacing:var(--display-tracking);font-size:1.5rem;
+}
+.stage[data-dir="b"] .browse-head .q{font-size:2.1rem}
+.stage[data-dir="c"] .browse-head .q{font-style:italic}
+.browse-head .q em{color:var(--fg-3);font-style:normal}
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+.filters .f{
+  font-size:11.5px;font-weight:500;color:var(--fg-2);cursor:pointer;
+  background:var(--glass-1);border:1px solid var(--stroke-soft);
+  border-radius:9px;padding:7px 12px;display:flex;align-items:center;gap:7px;
+  transition:.15s;
+}
+.filters .f:hover{border-color:var(--stroke-strong);color:var(--fg-1)}
+.filters .f.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600}
+.filters .f svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2}
+
+.grid{
+  display:grid;gap:20px 18px;
+  grid-template-columns:repeat(auto-fill,minmax(248px,1fr));
+}
+.stage[data-dir="a"] .grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.stage[data-dir="b"] .grid{padding:0 30px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:28px 22px}
+.vcard{cursor:pointer;display:flex;flex-direction:column;gap:10px}
+.vcard .vt{
+  position:relative;aspect-ratio:16/9;border-radius:var(--card-radius);overflow:hidden;
+  background:linear-gradient(145deg,#1d2d49,#0c1320);
+  border:1px solid var(--stroke-soft);
+  transition:transform .28s var(--ease),box-shadow .28s var(--ease);
+}
+.vcard:hover .vt{transform:translateY(-4px);box-shadow:0 18px 40px -14px rgba(0,0,0,.6)}
+.stage[data-dir="b"] .vcard:hover .vt{box-shadow:0 24px 60px -16px var(--glow)}
+.vcard .vt .d{
+  position:absolute;right:6px;bottom:6px;font-family:var(--font-mono);font-size:10px;
+  background:rgba(0,0,0,.82);color:#fff;padding:2px 5px;border-radius:4px;font-variant-numeric:tabular-nums;
+}
+.vcard .vt .sheen{
+  position:absolute;inset:0;
+  background:radial-gradient(90% 60% at 30% 15%,rgba(255,255,255,.12),transparent 60%);
+}
+.vcard .ci{display:flex;gap:10px}
+.vcard .ci .av{width:30px;height:30px;border-radius:50%;flex:none;background:linear-gradient(135deg,#3a4a66,#20283a)}
+.stage[data-dir="a"] .vcard .ci .av{display:none}
+.vcard .tt{
+  font-family:var(--font-body);font-weight:600;font-size:13px;line-height:1.34;color:var(--fg-1);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.stage[data-dir="b"] .vcard .tt{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:-.01em}
+.vcard .mm{font-size:11px;color:var(--fg-3);margin-top:4px;font-variant-numeric:tabular-nums}
+
+/* reduced motion */
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;transition-duration:.05ms!important}
+}
+@media (max-width:1180px){
+  .stage[data-dir="a"]{--queue-w:0px}
+  .stage[data-dir="c"]{--queue-w:0px}
+  .stage[data-dir="a"] .queue,.stage[data-dir="c"] .queue{display:none}
+}
+</style>
+
+<div class="shell">
+  <div class="deck">
+    <div>
+      <h1>LuneTube — <b>three directions</b></h1>
+    </div>
+    <p>Same content, same Lunegit glass language, three identities. Pick one and it goes straight into the build loop. Switch direction &amp; screen below.</p>
+  </div>
+
+  <div class="controls">
+    <div class="seg" role="tablist" aria-label="Direction">
+      <button data-dir="a" aria-pressed="true">A · Atlas</button>
+      <button data-dir="b" aria-pressed="false">B · Cinema</button>
+      <button data-dir="c" aria-pressed="false">C · Studio</button>
+    </div>
+    <div class="seg" role="tablist" aria-label="Screen">
+      <button data-screen="watch" aria-pressed="true">Watch</button>
+      <button data-screen="browse" aria-pressed="false">Browse</button>
+    </div>
+    <span class="note">mockup · not wired to YouTube</span>
+  </div>
+
+  <p class="dirline" id="dirline"></p>
+
+  <div class="stage" id="stage" data-dir="a" data-screen="watch">
+    <div class="backdrop"></div>
+    <div class="grain"></div>
+
+    <div class="app">
+      <!-- title bar -->
+      <div class="titlebar">
+        <div class="lights"><i></i><i></i><i></i></div>
+        <div class="wordmark">Lune<span>Tube</span></div>
+        <div class="topsearch">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          Search YouTube
+        </div>
+        <div class="kbd">⌘K &nbsp;·&nbsp; jump to anything</div>
+      </div>
+
+      <!-- rail -->
+      <nav class="rail" aria-label="Primary">
+        <a class="nav on"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg><span class="lbl">Home</span></a>
+        <a class="nav"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><span class="lbl">Search</span></a>
+        <a class="nav"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="lbl">Subscriptions</span></a>
+        <a class="nav"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.35-9.5-8.5A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6.5C19 16.65 12 21 12 21Z"/></svg><span class="lbl">Following</span></a>
+        <div class="grp">Library</div>
+        <a class="nav"><svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg><span class="lbl">History</span></a>
+        <a class="nav"><svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 20v-5h5"/></svg><span class="lbl">Watch Later</span></a>
+        <a class="nav"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/><path d="M17 14v7l3-2 3 2v-7"/></svg><span class="lbl">Playlists</span></a>
+        <a class="nav"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/></svg><span class="lbl">Downloads</span><span class="soon">soon</span></a>
+        <div class="spacer"></div>
+        <a class="nav"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7.7 1.6 1.6 0 0 0-.4 1V21a2 2 0 0 1-4 0v-.2a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .4-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.2a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.4-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H10a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.2a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V10a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.2a1.6 1.6 0 0 0-1.4 1Z"/></svg><span class="lbl">Settings</span></a>
+      </nav>
+
+      <!-- main -->
+      <div class="main">
+        <div class="pad">
+
+          <div class="cmdbar">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <span>Search videos, channels, playlists — or run a command</span>
+            <span class="kbd">⌘K</span>
+          </div>
+
+          <div class="cinebar">
+            <div class="cine-search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              Search
+            </div>
+            <nav class="cine-tabs">
+              <a class="on">Home</a><a>Following</a><a>History</a><a>Playlists</a>
+            </nav>
+            <div class="av"></div>
+          </div>
+
+          <!-- WATCH -->
+          <section class="screen show" data-screen="watch">
+            <div class="watch-wrap">
+              <div class="player" id="player">
+                <div class="frame"><div class="viz"></div></div>
+                <div class="amb"></div>
+                <div class="ctl">
+                  <div class="timeline" id="timeline">
+                    <div class="track">
+                      <div class="buf"></div><div class="play" id="playbar"></div>
+                      <div class="spon" title="SponsorBlock — sponsor"></div>
+                      <div class="chap" style="left:7%"></div><div class="chap" style="left:23%"></div>
+                      <div class="chap" style="left:44%"></div><div class="chap" style="left:65%"></div>
+                      <div class="chap" style="left:88%"></div>
+                    </div>
+                    <div class="head" id="head"></div>
+                    <div class="bubble" id="bubble"><div class="thumb"></div><div class="t">7:12 · Winding graphs</div></div>
+                  </div>
+                  <div class="row">
+                    <button class="ib play" id="playbtn" aria-label="Pause">
+                      <svg id="playicon" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                    </button>
+                    <button class="ib" aria-label="Next"><svg viewBox="0 0 24 24"><path d="m5 5 11 7-11 7z" fill="currentColor" stroke="none"/><rect x="18" y="5" width="2.4" height="14" rx="1" fill="currentColor" stroke="none"/></svg></button>
+                    <button class="ib" aria-label="Volume"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M19 6a8 8 0 0 1 0 12"/></svg></button>
+                    <div class="vol"></div>
+                    <span class="time">7:12&nbsp;/&nbsp;20:57</span>
+                    <div class="right">
+                      <span class="pill hot">CC</span>
+                      <span class="pill">1×</span>
+                      <span class="pill">1080p</span>
+                      <button class="ib" aria-label="Audio only"><svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></button>
+                      <button class="ib" aria-label="Mini player"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><rect x="12" y="11" width="7" height="5" rx="1" fill="currentColor" stroke="none"/></svg></button>
+                      <button class="ib" aria-label="Theater"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/></svg></button>
+                      <button class="ib" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="meta">
+                <h2 class="vtitle">But what is the Fourier Transform? A visual introduction</h2>
+                <div class="subrow">
+                  <div class="chan">
+                    <div class="av"></div>
+                    <div>
+                      <div class="nm">3Blue1Brown</div>
+                      <div class="sub">6.42M followers</div>
+                    </div>
+                  </div>
+                  <button class="btn solid">Follow</button>
+                  <div class="actions">
+                    <div class="grp2">
+                      <button aria-label="Like"><svg viewBox="0 0 24 24"><path d="M7 10v11H4V10zM7 10l4-7a2.5 2.5 0 0 1 3 3l-1 4h5a2 2 0 0 1 2 2.3l-1.4 6A2 2 0 0 1 19 21H7"/></svg><span class="count">284K</span></button>
+                      <button aria-label="Dislike"><svg viewBox="0 0 24 24"><path d="M17 14V3h3v11zM17 14l-4 7a2.5 2.5 0 0 1-3-3l1-4H6a2 2 0 0 1-2-2.3l1.4-6A2 2 0 0 1 6 3h11"/></svg></button>
+                    </div>
+                    <button class="btn"><svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;vertical-align:-2px"><path d="M4 12v8h16v-8"/><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/></svg> Share</button>
+                    <button class="btn"><svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;vertical-align:-2px"><path d="m12 4 2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4L7.5 20l.9-5L4.8 11.5l5-.7z"/></svg> Save</button>
+                  </div>
+                </div>
+
+                <div class="desc">
+                  <span class="stat">12,483,902 views</span> · Nov 2019 &nbsp;·&nbsp; The Fourier transform, pulled apart with a single moving picture: wind a signal around a circle, watch the centre of mass, and read the frequencies straight off the wobble. &nbsp;<br>
+                  <span class="ts">0:00</span> Intro &nbsp; <span class="ts">1:24</span> The core idea &nbsp; <span class="ts">4:52</span> Winding graphs &nbsp; <span class="ts">9:07</span> The frequency spike &nbsp; <span class="ts">13:40</span> Complex numbers
+                  <span class="more">Show more</span>
+                  <div class="chips"><span class="chip">mathematics</span><span class="chip">signal processing</span><span class="chip">manim</span><span class="chip">education</span></div>
+                </div>
+
+                <div class="comm">
+                  <h3>Comments <span class="c">4,812</span> <span class="c">· Top first</span></h3>
+                  <div class="comment">
+                    <div class="av"></div>
+                    <div class="bd">
+                      <div class="h"><b>Marcus Reyall</b> <span>1 year ago</span></div>
+                      <p>The winding-graph animation at <span class="ts">4:52</span> is the moment this finally clicked, after years of pushing symbols around. Genuinely the best explanation on the internet.</p>
+                      <div class="lk">
+                        <span>▲ 2,134</span><span>▼</span><span>Reply</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="comment">
+                    <div class="av"></div>
+                    <div class="bd">
+                      <div class="h"><b>notveryfourier</b> <span>3 months ago</span></div>
+                      <p>came here from a signals &amp; systems midterm, staying for the animation quality</p>
+                      <div class="lk"><span>▲ 883</span><span>▼</span><span>Reply</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- BROWSE -->
+          <section class="screen" data-screen="browse">
+            <div class="browse-head">
+              <div class="q"><em>Results for</em> “fourier transform”</div>
+              <div class="filters">
+                <span class="f on"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg> Filters</span>
+                <span class="f">This year</span>
+                <span class="f">Under 20 min</span>
+                <span class="f">Video</span>
+                <span class="f">4K</span>
+                <span class="f">Sort: View count</span>
+              </div>
+            </div>
+            <div class="grid" id="grid"></div>
+          </section>
+
+        </div>
+      </div>
+
+      <!-- queue -->
+      <aside class="queue" aria-label="Up next">
+        <div class="qh">
+          <b>Up Next</b>
+          <span class="lp"><i></i> Autoplay</span>
+        </div>
+        <div class="qlist" id="qlist"></div>
+      </aside>
+
+      <!-- cinema dock -->
+      <div class="dock">
+        <div class="mini"></div>
+        <div class="di">
+          <div class="t">But what is the Fourier Transform? A visual introduction</div>
+          <div class="s">3Blue1Brown · 7:12 / 20:57</div>
+        </div>
+        <div class="dc">
+          <button aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M19 5 8 12l11 7z" fill="currentColor" stroke="none"/><rect x="4" y="5" width="2.4" height="14" rx="1" fill="currentColor" stroke="none"/></svg></button>
+          <button class="play" aria-label="Pause"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
+          <button aria-label="Next"><svg viewBox="0 0 24 24"><path d="m5 5 11 7-11 7z" fill="currentColor" stroke="none"/><rect x="18" y="5" width="2.4" height="14" rx="1" fill="currentColor" stroke="none"/></svg></button>
+        </div>
+        <div class="upnext">up next<b>The essence of calculus</b></div>
+      </div>
+
+    </div>
+  </div>
+
+  <p class="dirline" style="margin-top:16px;color:var(--fg-4)">
+    Fonts: Atlas — Archivo / Inter / JetBrains Mono · Cinema — Bricolage Grotesque / Inter / IBM Plex Mono · Studio — Fraunces / Hanken Grotesk / Space Mono. Accent shown per direction; real build pulls the five Lunegit theme JSONs.
+  </p>
+</div>
+
+<script>
+(function(){
+  var stage=document.getElementById('stage');
+
+  var blurb={
+    a:'<strong>A · Atlas</strong> — literal Lunegit. Full labelled left rail, dense information, Swiss grotesque type, restrained motion, right-hand Up-Next drawer. Feels like a sibling of Lunegit Desktop. Accent: blue, used only for the scrubber, focus and links.',
+    b:'<strong>B · Cinema</strong> — the video leads. No rail, one floating top bar, edge-to-edge player, oversized Bricolage titles. The whole shell re-tints to the current video’s dominant colour; a bottom now-playing dock replaces the queue drawer. Most immersive, least chrome.',
+    c:'<strong>C · Studio</strong> — hybrid. Slim 68px icon rail plus a persistent ⌘K command bar, theater-first watch layout, Fraunces serif for the wordmark, numerals and the video title against a grotesque body. Editorial and keyboard-driven. Accent: green.'
+  };
+  var dl=document.getElementById('dirline');
+
+  function setDir(d){
+    stage.dataset.dir=d;
+    dl.innerHTML=blurb[d];
+    document.querySelectorAll('.seg [data-dir]').forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.dir===d);
+    });
+    stage.animate([{opacity:.55,transform:'scale(.994)'},{opacity:1,transform:'scale(1)'}],{duration:340,easing:'cubic-bezier(.22,.61,.36,1)'});
+  }
+  function setScreen(s){
+    stage.dataset.screen=s;
+    document.querySelectorAll('.screen').forEach(function(el){el.classList.toggle('show',el.dataset.screen===s)});
+    document.querySelectorAll('.seg [data-screen]').forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.screen===s);
+    });
+    document.querySelector('.main').scrollTop=0;
+  }
+  document.querySelectorAll('.seg [data-dir]').forEach(function(b){b.addEventListener('click',function(){setDir(b.dataset.dir)})});
+  document.querySelectorAll('.seg [data-screen]').forEach(function(b){b.addEventListener('click',function(){setScreen(b.dataset.screen)})});
+
+  // videos
+  var vids=[
+    ['The essence of calculus','3Blue1Brown','17:04','9.2M views · 6 yr'],
+    ['How I animate 3Blue1Brown  |  A Manim demo','3Blue1Brown','22:22','3.1M views · 2 yr'],
+    ['The Map of Mathematics','Domain of Science','11:06','8.7M views · 7 yr'],
+    ['lofi hip hop radio 📚 beats to relax / study to','Lofi Girl','LIVE','24,105 watching'],
+    ['The Biggest Ideas in the Universe  |  Holography','Sean Carroll','1:34:10','412K views · 4 yr'],
+    ['How does a transistor actually work?','Branch Education','22:08','5.6M views · 1 yr'],
+    ['The Fast Fourier Transform (FFT), explained','Reducible','19:41','1.4M views · 3 yr'],
+    ['Fourier Series: pictures, not equations','Mathologer','29:33','2.0M views · 5 yr'],
+    ['Building a synth from a Fourier transform','Ben Eater','41:12','780K views · 2 yr']
+  ];
+  var q=document.getElementById('qlist');
+  vids.forEach(function(v,i){
+    var live=v[2]==='LIVE';
+    var d=document.createElement('div');
+    d.className='qitem'+(i===0?' on':'');
+    d.innerHTML='<div class="n">'+(i===0?'▶':(i+1))+'</div>'+
+      '<div class="qthumb"><span class="d'+(live?' live':'')+'">'+v[2]+'</span></div>'+
+      '<div class="qmeta"><div class="t">'+v[0]+'</div><div class="s">'+v[1]+' · '+v[3]+'</div></div>';
+    q.appendChild(d);
+  });
+
+  var g=document.getElementById('grid');
+  vids.concat(vids.slice(0,3)).forEach(function(v){
+    var live=v[2]==='LIVE';
+    var c=document.createElement('div');
+    c.className='vcard';
+    c.innerHTML='<div class="vt"><div class="sheen"></div><span class="d">'+v[2]+'</span></div>'+
+      '<div class="ci"><div class="av"></div><div><div class="tt">'+v[0]+'</div>'+
+      '<div class="mm">'+v[1]+' · '+v[3]+'</div></div></div>';
+    g.appendChild(c);
+  });
+
+  // player micro-interaction
+  var playing=true;
+  var pb=document.getElementById('playbtn'), pi=document.getElementById('playicon');
+  pb.addEventListener('click',function(){
+    playing=!playing;
+    pi.innerHTML= playing
+      ? '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>'
+      : '<path d="M7 4 20 12 7 20z"/>';
+    pb.setAttribute('aria-label', playing?'Pause':'Play');
+  });
+
+  // scrub preview follows pointer
+  var tl=document.getElementById('timeline'), head=document.getElementById('head'),
+      bub=document.getElementById('bubble'), bar=document.getElementById('playbar');
+  tl.addEventListener('pointermove',function(e){
+    var r=tl.getBoundingClientRect(), p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+    bub.style.left=(p*100)+'%';
+    var total=1257, cur=Math.round(p*total), m=Math.floor(cur/60), s=('0'+(cur%60)).slice(-2);
+    var lbl=p<.07?'Intro':p<.23?'The core idea':p<.44?'Winding graphs':p<.65?'The frequency spike':p<.88?'Complex numbers':'Wrap-up';
+    bub.querySelector('.t').textContent=m+':'+s+' · '+lbl;
+  });
+  tl.addEventListener('click',function(e){
+    var r=tl.getBoundingClientRect(), p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+    bar.style.width=(p*100)+'%'; head.style.left=(p*100)+'%';
+  });
+
+  setDir('a'); setScreen('watch');
+})();
+</script>
