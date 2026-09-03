@@ -12,6 +12,7 @@ import {
   Tooltip,
 } from '@lunetube/design';
 import { Heart, MoreVertical, Play } from 'lucide-react';
+import { PlayerSurface } from '../../player/PlayerSurface.js';
 
 export function DevDesignRoute() {
   const [seg, setSeg] = useState('a');
@@ -76,6 +77,42 @@ export function DevDesignRoute() {
         <Skeleton height={18} />
         <Skeleton width="60%" height={14} />
       </Panel>
+
+      <PlayerHarness />
     </section>
+  );
+}
+
+/**
+ * P1-5 dev harness. The real mount point is P1-6's watch route; this exists so
+ * (a) `PlayerSurface` — and therefore shaka-player — is in the renderer's
+ * rollup graph, proving it bundles under electron-vite before P1-6 depends on
+ * it, and (b) the plan's manual acceptance ("a real YouTube video plays, seeks,
+ * switches quality, shows captions") has a surface to run against.
+ *
+ * It is deliberately opt-in: nothing loads until "Mount player" is pressed, so
+ * visiting this route never touches the network and no Playwright spec can trip
+ * over a real stream.
+ */
+function PlayerHarness() {
+  const [videoId, setVideoId] = useState('LXb3EKWsInQ');
+  const [mounted, setMounted] = useState(false);
+
+  return (
+    <Panel className="glass-panel" style={{ display: 'grid', gap: 12 }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <input
+          className="topbar__search"
+          style={{ maxWidth: 260 }}
+          value={videoId}
+          aria-label="Video id"
+          onChange={(e) => setVideoId(e.currentTarget.value)}
+        />
+        <Button variant="surface" onClick={() => setMounted((v) => !v)}>
+          {mounted ? 'Unmount player' : 'Mount player'}
+        </Button>
+      </div>
+      {mounted && <PlayerSurface key={videoId} videoId={videoId.trim()} />}
+    </Panel>
   );
 }

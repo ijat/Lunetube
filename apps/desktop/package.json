@@ -9,12 +9,11 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc -b"
   },
-  "dependencies": {},
   "devDependencies": {
+    "@electron-toolkit/utils": "^4.0.0",
     "@lunetube/design": "workspace:*",
     "@lunetube/shared": "workspace:*",
     "@lunetube/youtube": "workspace:*",
-    "@electron-toolkit/utils": "^4.0.0",
     "@tanstack/react-query": "^5.102.8",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -22,6 +21,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3",
+    "shaka-player": "5.2.8",
     "zustand": "^5.0.15"
   }
 }

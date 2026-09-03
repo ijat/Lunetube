@@ -12,7 +12,13 @@ export const PROD_CSP = [
   "font-src 'self'",
   "img-src 'self' data: blob: http://127.0.0.1:*",
   "media-src 'self' blob: http://127.0.0.1:*",
-  "connect-src 'self' http://127.0.0.1:*",
+  // `blob:` is required by P1-5: `PlaybackEngine` hands shaka the DASH manifest
+  // as an object URL (`URL.createObjectURL`), and shaka *fetches* that URL —
+  // which CSP scores against `connect-src`, where `'self'` deliberately does
+  // NOT cover `blob:`. Without this the player cannot load anything in a
+  // packaged build. The grant is narrow: a `blob:` URL is only ever minted by
+  // this renderer from bytes it already holds, so it adds no new network reach.
+  "connect-src 'self' blob: http://127.0.0.1:*",
 ].join('; ');
 
 export function installSessionSecurity(session: Session, { isDev }: { isDev: boolean }): void {
