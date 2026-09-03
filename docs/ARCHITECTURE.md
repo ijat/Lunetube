@@ -150,6 +150,28 @@ engine; nothing writes playback state into the store except the tick.
 > against `connect-src`, where `'self'` deliberately does not cover `blob:`.
 > Without the grant the player cannot load anything in a packaged build.
 
+### Watch page (P1-6) — `apps/desktop/src/renderer/routes/watch/`
+
+Direction-B layout: full-bleed player, meta block (`26px 30px 0`), then Phase-2
+comments/related placeholders. The player **mounts on the first play click**, not
+on route entry — the poster is shown first. This keeps the `LUNE_FAKE_YT=1` e2e
+path network-free (the fixture's googlevideo URLs are expired) with no test-only
+branch, and sidesteps Chromium's autoplay policy.
+
+`DominantColorWash` runs `node-vibrant` over the thumbnail and writes
+`--wash-a` / `--wash-b` / `--glow` on `:root`; the ~1.1s cross-fade is the CSS
+`transition` on `.backdrop::before` / `::after`.
+
+> **Images and CSP.** `img-src` allows only `'self' data: blob: http://127.0.0.1:*`
+> — no `https:`. So thumbnails and avatars must reach the renderer **already
+> rewritten to the `/img` proxy**: `getVideo` / `getRelated` route them through
+> the injected image rewriter (`map/video.ts`, identity when none is injected —
+> the `FakeYouTubeSource` / `LUNE_LIVE` case). `renderer/lib/img.ts`
+> `loopbackImage()` is the guard: components render `<img>` (and the wash reads
+> pixels) only for a `127.0.0.1` URL, else they fall back to a gradient
+> placeholder. Proxying is also what keeps the colour-extraction canvas
+> untainted (the `/img` route sets `Access-Control-Allow-Origin`).
+
 ## Design system
 
 `packages/design`: `tokens/base.css` (Lunegit white-alpha baseline) →

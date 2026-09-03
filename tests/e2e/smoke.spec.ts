@@ -31,10 +31,11 @@ test('Cinema shell boots, renders the top bar, and logs no console errors', asyn
     await expect(page.locator('.backdrop')).toBeAttached();
 
     // Numerals: Hanken Grotesk + tabular-nums, never a fixed-pitch face (PRD §7).
+    // The watch page's view-count line (`44,100,000 views`) is a real numeral run.
     await page.evaluate(() => {
-      window.location.hash = '#/watch/smoketest';
+      window.location.hash = '#/watch/LXb3EKWsInQ';
     });
-    const numerals = page.locator('.route__note.tnum');
+    const numerals = page.locator('.watch__desc-stat.tnum');
     await expect(numerals).toBeVisible();
     const font = (await numerals.evaluate((el) => getComputedStyle(el).fontFamily)).toLowerCase();
     expect(font).toContain('hanken');

@@ -14,7 +14,7 @@ import {
   type RawHeatmap,
   type RawPlayerOverlays,
 } from './chapters.js';
-import { pickThumbnailUrl, type RawThumbnail } from './thumbnail.js';
+import { pickThumbnailUrl, pickThumbnailUrlRewritten, type RawThumbnail } from './thumbnail.js';
 import {
   nonEmpty,
   parseHumanCount,
@@ -65,8 +65,27 @@ function keywords(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((k): k is string => typeof k === 'string') : [];
 }
 
+/**
+ * Optional `(URL) => URL` image rewriter. When supplied by the adapter it routes
+ * thumbnail / avatar URLs through the loopback `/img` proxy, so the renderer can
+ * (a) display them under a CSP that forbids `https:` images and (b) read their
+ * pixels from a same-origin canvas (P1-6 dominant-colour wash). Omitted → raw
+ * upstream URLs (mapper unit tests, `LUNE_LIVE` smoke).
+ */
+export type ImageRewriter = (url: URL) => URL;
+
+function thumbUrl(
+  thumbnails: readonly RawThumbnail[] | null | undefined,
+  rewriteImage: ImageRewriter | undefined,
+  opts?: { maxWidth?: number },
+): string | null {
+  return rewriteImage
+    ? pickThumbnailUrlRewritten(thumbnails, rewriteImage, opts)
+    : pickThumbnailUrl(thumbnails, opts);
+}
+
 /** Channel reference for a video. Falls back through basic_info → secondary_info. */
-export function mapChannelRef(info: RawVideoInfo): ChannelRef {
+export function mapChannelRef(info: RawVideoInfo, rewriteImage?: ImageRewriter): ChannelRef {
   const basic = info.basic_info ?? {};
   const author = info.secondary_info?.owner?.author ?? null;
   const id =
@@ -79,7 +98,8 @@ export function mapChannelRef(info: RawVideoInfo): ChannelRef {
     nonEmpty(basic.author as MaybeText) ??
     (author != null ? nonEmpty(author.name as MaybeText) : null) ??
     '';
-  const avatarUrl = author != null ? pickThumbnailUrl(author.thumbnails, { maxWidth: 176 }) : null;
+  const avatarUrl =
+    author != null ? thumbUrl(author.thumbnails, rewriteImage, { maxWidth: 176 }) : null;
   return { id, name, avatarUrl };
 }
 
@@ -90,7 +110,10 @@ export function mapDescription(info: RawVideoInfo): string {
   return textToString(info.basic_info?.short_description as MaybeText);
 }
 
-export function mapVideoDetail(info: RawVideoInfo): VideoDetail | null {
+export function mapVideoDetail(
+  info: RawVideoInfo,
+  rewriteImage?: ImageRewriter,
+): VideoDetail | null {
   const basic = info.basic_info ?? {};
   const id = typeof basic.id === 'string' && basic.id.length > 0 ? basic.id : null;
   if (id == null) return null;
@@ -104,9 +127,9 @@ export function mapVideoDetail(info: RawVideoInfo): VideoDetail | null {
   return {
     id,
     title: textToString(basic.title as MaybeText),
-    channel: mapChannelRef(info),
+    channel: mapChannelRef(info, rewriteImage),
     durationSec,
-    thumbnailUrl: pickThumbnailUrl(basic.thumbnail),
+    thumbnailUrl: thumbUrl(basic.thumbnail, rewriteImage),
     publishedText,
     viewCount: toNumberOrNull(basic.view_count),
     isLive,
@@ -158,7 +181,10 @@ function parseDurationSec(node: RawFeedVideoNode): number | null {
   return parts.reduce((acc, n) => acc * 60 + n, 0);
 }
 
-export function mapFeedVideo(node: RawFeedVideoNode): VideoSummary | null {
+export function mapFeedVideo(
+  node: RawFeedVideoNode,
+  rewriteImage?: ImageRewriter,
+): VideoSummary | null {
   const id =
     (typeof node.video_id === 'string' && node.video_id) ||
     (typeof node.id === 'string' && node.id) ||
@@ -173,7 +199,7 @@ export function mapFeedVideo(node: RawFeedVideoNode): VideoSummary | null {
       (author != null ? nonEmpty(author.name as MaybeText) : null) ??
       nonEmpty(node.short_byline_text) ??
       '',
-    avatarUrl: author != null ? pickThumbnailUrl(author.thumbnails, { maxWidth: 176 }) : null,
+    avatarUrl: author != null ? thumbUrl(author.thumbnails, rewriteImage, { maxWidth: 176 }) : null,
   };
 
   return {
@@ -181,7 +207,7 @@ export function mapFeedVideo(node: RawFeedVideoNode): VideoSummary | null {
     title: textToString(node.title),
     channel,
     durationSec: parseDurationSec(node),
-    thumbnailUrl: pickThumbnailUrl(node.thumbnails ?? node.thumbnail),
+    thumbnailUrl: thumbUrl(node.thumbnails ?? node.thumbnail, rewriteImage),
     publishedText: nonEmpty(node.published),
     viewCount: parseViewCount(node),
     isLive: toBool(node.is_live),
@@ -190,7 +216,10 @@ export function mapFeedVideo(node: RawFeedVideoNode): VideoSummary | null {
 
 export function mapFeedVideos(
   nodes: readonly RawFeedVideoNode[] | null | undefined,
+  rewriteImage?: ImageRewriter,
 ): VideoSummary[] {
   if (!Array.isArray(nodes)) return [];
-  return nodes.map(mapFeedVideo).filter((v): v is VideoSummary => v != null);
+  return nodes
+    .map((node) => mapFeedVideo(node, rewriteImage))
+    .filter((v): v is VideoSummary => v != null);
 }

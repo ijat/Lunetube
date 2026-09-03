@@ -257,6 +257,7 @@ button {
   aspect-ratio: 16 / 9;
   border-radius: 7px;
   background: linear-gradient(145deg, #1c2c46, #0d1420);
+  object-fit: cover;
   flex: none;
 }
 .dock__meta {

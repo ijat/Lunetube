@@ -126,7 +126,7 @@ export class InnertubeYouTubeSource implements YouTubeSource {
     return this.#guard(async (yt) => {
       const info = await yt.getInfo(videoId);
       const playErr = mapPlayabilityStatus(info.playability_status);
-      const detail = mapVideoDetail(info as unknown as RawVideoInfo);
+      const detail = mapVideoDetail(info as unknown as RawVideoInfo, this.#rewriteImage);
       if (detail == null) {
         return err(playErr ?? parseChanged('getVideo: no basic_info.id'));
       }
@@ -250,7 +250,7 @@ export class InnertubeYouTubeSource implements YouTubeSource {
 
   #pageFromWatchNext(info: unknown): Paged<VideoSummary> {
     const feed = (info as { watch_next_feed?: unknown }).watch_next_feed;
-    const items = mapFeedVideos(feed as never);
+    const items = mapFeedVideos(feed as never, this.#rewriteImage);
     const hasMore = (info as { wn_has_continuation?: unknown }).wn_has_continuation === true;
     if (!hasMore) return { items };
     return { items, continuation: this.#related.put(info) };

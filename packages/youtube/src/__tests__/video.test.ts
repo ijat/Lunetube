@@ -51,6 +51,36 @@ describe('mapVideoDetail (video-normal)', () => {
   });
 });
 
+describe('mapVideoDetail image rewriter (P1-6: /img proxy for CSP + canvas)', () => {
+  const rewrite = (url: URL): URL =>
+    new URL(`http://127.0.0.1:5599/tok/img?u=${encodeURIComponent(url.toString())}`);
+  const detail = mapVideoDetail(loadVideoFixture('video-normal'), rewrite);
+
+  it('routes the video thumbnail through the injected rewriter', () => {
+    expect(detail?.thumbnailUrl).toBe(
+      'http://127.0.0.1:5599/tok/img?u=' +
+        encodeURIComponent('https://i.ytimg.com/vi/LXb3EKWsInQ/maxresdefault.jpg'),
+    );
+  });
+
+  it('routes the channel avatar through the injected rewriter', () => {
+    expect(detail?.channel.avatarUrl).toBe(
+      'http://127.0.0.1:5599/tok/img?u=' +
+        encodeURIComponent('https://yt3.ggpht.com/ytc/avatar_s176.jpg'),
+    );
+  });
+
+  it('rewrites related-feed thumbnails and avatars too', () => {
+    const items = mapFeedVideos(loadVideoFixture('video-normal').watch_next_feed, rewrite);
+    for (const item of items) {
+      if (item.thumbnailUrl != null)
+        expect(item.thumbnailUrl).toContain('127.0.0.1:5599/tok/img?u=');
+      if (item.channel.avatarUrl != null)
+        expect(item.channel.avatarUrl).toContain('127.0.0.1:5599/tok/img?u=');
+    }
+  });
+});
+
 describe('mapVideoDetail degradation', () => {
   it('returns null when there is no video id', () => {
     expect(mapVideoDetail({ basic_info: { title: 'x' } })).toBeNull();

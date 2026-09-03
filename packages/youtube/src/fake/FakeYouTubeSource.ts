@@ -87,7 +87,7 @@ export class FakeYouTubeSource implements YouTubeSource {
   async getVideo(params: { videoId: string }): Promise<Result<VideoDetail, LuneError>> {
     const fixture = this.#find(params.videoId);
     if (fixture == null) return err(this.#notFound(params.videoId));
-    const detail = mapVideoDetail(fixture);
+    const detail = mapVideoDetail(fixture, this.#image);
     if (detail == null) {
       return err(
         makeLuneError('YT_PARSE_CHANGED', 'Fixture has no basic_info.id.', { detail: 'fake' }),
@@ -142,7 +142,7 @@ export class FakeYouTubeSource implements YouTubeSource {
       // Fixtures hold a single page; a second page is always empty.
       return ok({ items: [] });
     }
-    return ok({ items: mapFeedVideos(fixture.watch_next_feed) });
+    return ok({ items: mapFeedVideos(fixture.watch_next_feed, this.#image) });
   }
 
   async getDiagnostics(): Promise<Result<AdapterDiagnostics, LuneError>> {
