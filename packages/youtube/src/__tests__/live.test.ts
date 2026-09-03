@@ -2,23 +2,43 @@
  * Opt-in live smoke test. Skipped unless `LUNE_LIVE=1` — **never runs in CI**
  * (GitHub datacenter IPs are bot-blocked; plan F2/R2). Run locally with:
  *
- *   LUNE_LIVE=1 pnpm --filter @lunetube/youtube test
+ *   LUNE_LIVE=1 pnpm vitest run packages/youtube/src/__tests__/live.test.ts
  *
- * It hits real YouTube: `getVideo` + `getStreams` for the plan's F2 test IDs.
+ * It hits real YouTube: `getVideo` + `getStreams` for the plan's F2 test IDs,
+ * and — the reason it exists — proves against the real generator that a
+ * manifest resolved through proxy rewriters contains **no** upstream URL.
  */
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { JSDOM, type XmlElement } from 'jsdom';
 import { InnertubeYouTubeSource } from '../innertube/source.js';
 import { identityRewriter } from '../contract.js';
 
 const LIVE = process.env['LUNE_LIVE'] === '1';
 const IDS = ['LXb3EKWsInQ', 'aqz-KE-bpKQ'];
+/** 4K/60, plan F2. Verified 2026-09-04: 34 formats, all with URLs, no captions. */
+const UHD_ID = 'LXb3EKWsInQ';
+/**
+ * A video that actually has caption tracks. Verified 2026-09-04 that the `IOS`
+ * client returns six for it, while both 4K test videos above return **none** —
+ * so caption routing has to be asserted against this one or the assertion is
+ * vacuous.
+ */
+const CAPTIONED_ID = 'dQw4w9WgXcQ';
+
+const DOMParser = new JSDOM().window.DOMParser;
+
+const route =
+  (name: string) =>
+  (url: URL): URL =>
+    new URL(`http://127.0.0.1:5599/tok/${name}?u=${encodeURIComponent(url.toString())}`);
 
 describe.skipIf(!LIVE)('live YouTube (LUNE_LIVE=1)', () => {
+  const cacheDir = (): string => mkdtempSync(join(tmpdir(), 'lunetube-live-'));
   const source = new InnertubeYouTubeSource({
-    cacheDir: mkdtempSync(join(tmpdir(), 'lunetube-live-')),
+    cacheDir: cacheDir(),
     rewriters: { media: identityRewriter },
   });
 
@@ -48,4 +68,59 @@ describe.skipIf(!LIVE)('live YouTube (LUNE_LIVE=1)', () => {
     },
     30_000,
   );
+
+  it(`getStreams(${UHD_ID}) offers a real 2160p entry and expires in the future`, async () => {
+    const res = await source.getStreams({
+      videoId: UHD_ID,
+      prefs: { maxHeight: 'auto', preferredAudioLanguage: null, audioOnly: false },
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.video.some((track) => track.height === 2160)).toBe(true);
+    expect(res.value.client).toBe('IOS');
+    expect(res.value.expiresAt).toBeGreaterThan(Date.now());
+    expect(res.value.storyboards.length).toBeGreaterThan(0);
+  }, 30_000);
+
+  it('routes every URL of a real manifest through the proxy, media and captions alike', async () => {
+    const proxied = new InnertubeYouTubeSource({
+      cacheDir: cacheDir(),
+      rewriters: { media: route('media'), image: route('img'), caption: route('caption') },
+    });
+    const res = await proxied.getStreams({
+      videoId: CAPTIONED_ID,
+      prefs: { maxHeight: 'auto', preferredAudioLanguage: null, audioOnly: false },
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.captions.length).toBeGreaterThan(0);
+    for (const caption of res.value.captions) {
+      expect(caption.url).toContain('/tok/caption?u=');
+    }
+
+    const doc = new DOMParser().parseFromString(res.value.manifestXml, 'application/xml');
+    expect(Array.from<XmlElement>(doc.getElementsByTagName('parsererror'))).toHaveLength(0);
+
+    const urls: string[] = [];
+    for (const el of Array.from<XmlElement>(doc.getElementsByTagName('*'))) {
+      if (el.tagName === 'BaseURL' && (el.textContent ?? '').trim().length > 0) {
+        urls.push((el.textContent ?? '').trim());
+      }
+      for (const name of ['initialization', 'media', 'sourceURL', 'index']) {
+        const value = el.getAttribute(name);
+        if (value != null && /^https?:\/\//.test(value)) urls.push(value);
+      }
+    }
+    expect(urls.length).toBeGreaterThan(5);
+    for (const url of urls) expect(new URL(url).hostname).toBe('127.0.0.1');
+    expect(urls.some((u) => u.includes('/tok/caption?'))).toBe(true);
+    expect(res.value.manifestXml).not.toMatch(/>\s*https:\/\/[^<]*googlevideo\.com/);
+
+    const diag = await proxied.getDiagnostics();
+    expect(diag.ok).toBe(true);
+    if (diag.ok) {
+      expect(diag.value.lastClient).toBe('IOS');
+      expect(diag.value.lastExpiresAt).toBe(res.value.expiresAt);
+    }
+  }, 60_000);
 });

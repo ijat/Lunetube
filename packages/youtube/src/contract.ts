@@ -35,13 +35,19 @@ import type {
 
 /**
  * Rewrites an upstream URL to the loopback media proxy
- * (`apps/desktop/src/main/proxy`, wired in P1-3/P1-4). `packages/youtube` never
+ * (`apps/desktop/src/main/proxy`, wired in P1-4). `packages/youtube` never
  * imports the proxy or `electron`; it only receives these callbacks.
  *
  * `media` is required (googlevideo segment URLs → `/media`). `image`
  * (thumbnails / storyboards → `/img`) and `caption` (`timedtext` → `/caption`)
  * default to identity so the adapter is usable in tests and before the proxy
  * exists.
+ *
+ * **Whoever wires the real proxy must supply all three.** A generated DASH
+ * manifest carries caption tracks alongside media, and the renderer's CSP only
+ * permits `http://127.0.0.1:*`; leaving `caption` as identity produces a
+ * manifest whose text tracks the renderer is not allowed to fetch. See
+ * `src/playback/classicDash.ts` for how the three routes are demultiplexed.
  */
 export interface MediaUrlRewriters {
   media: (url: URL) => URL;

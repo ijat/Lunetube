@@ -51,12 +51,17 @@ describe('FakeYouTubeSource — the seam CI runs against', () => {
     if (!res.ok) expect(res.error.code).toBe('YT_UNAVAILABLE');
   });
 
-  it('getStreams works for a live video', async () => {
+  // Changed in P1-3, deliberately. The fake used to synthesise a manifest for a
+  // live fixture, which the InnerTube path can never do: youtubei.js' toDash()
+  // throws for live videos (v18.0.0 core/mixins/MediaInfo.js). A fake that
+  // succeeds where the real adapter fails is a false green — the whole point of
+  // it is that CI exercises the same strategy the app runs.
+  it('getStreams refuses a live video, exactly as the InnerTube path does', async () => {
     const res = await src.getStreams({ videoId: 'liveStream1', prefs: PREFS });
-    expect(res.ok).toBe(true);
-    if (res.ok) {
-      expect(res.value.isLive).toBe(true);
-      expect(res.value.manifestXml).toContain('<MPD');
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe('NOT_IMPLEMENTED');
+      expect(res.error.message).toMatch(/live/i);
     }
   });
 
