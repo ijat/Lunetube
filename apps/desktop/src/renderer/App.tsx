@@ -1,10 +1,14 @@
 import { useEffect } from 'react';
 import { HashRouter } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { isLuneError } from '@lunetube/shared';
 import { AppFrame } from './shell/AppFrame.js';
 import { AppRoutes } from './router.js';
 import { bridge, hasBridge } from './bridge.js';
+import { makeQueryClient } from './lib/queryClient.js';
 import { useUiStore } from './stores/uiStore.js';
+
+const queryClient = makeQueryClient();
 
 export function App() {
   const hydrate = useUiStore((s) => s.hydrate);
@@ -37,10 +41,12 @@ export function App() {
   }
 
   return (
-    <HashRouter>
-      <AppFrame>
-        <AppRoutes />
-      </AppFrame>
-    </HashRouter>
+    <QueryClientProvider client={queryClient}>
+      <HashRouter>
+        <AppFrame>
+          <AppRoutes />
+        </AppFrame>
+      </HashRouter>
+    </QueryClientProvider>
   );
 }
