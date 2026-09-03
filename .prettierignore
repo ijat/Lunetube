@@ -1,0 +1,13 @@
+node_modules/
+dist/
+out/
+coverage/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+*.tsbuildinfo
+packages/design/src/themes/generated/
+packages/design/src/fonts/
+docs/mockups.html
+docs/PRD.md
+*.woff2

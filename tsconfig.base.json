@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    "paths": {
+      "@lunetube/shared": ["./packages/shared/src/index.ts"],
+      "@lunetube/shared/*": ["./packages/shared/src/*"],
+      "@lunetube/design": ["./packages/design/src/index.ts"],
+      "@lunetube/design/*": ["./packages/design/src/*"],
+      "@lunetube/youtube": ["./packages/youtube/src/index.ts"],
+      "@lunetube/youtube/*": ["./packages/youtube/src/*"]
+    }
+  }
+}
