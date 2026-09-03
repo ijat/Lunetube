@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
 import {
+  isLuneError,
   makeLuneError,
   type IpcChannel,
   type IpcRequests,
@@ -34,6 +35,10 @@ export function defineHandler<K extends IpcChannel>(
       const input = validate ? validate(payload) : (payload as IpcRequests[K]);
       return { ok: true, value: await handler(input) };
     } catch (cause) {
+      // A deliberately-thrown `LuneError` is a plain object, not an `Error`
+      // (`makeLuneError`), so it must pass through with its `code` and
+      // `retryable` flag intact rather than being flattened to `INTERNAL` (F18).
+      if (isLuneError(cause)) return { ok: false, error: cause };
       const message = cause instanceof Error ? cause.message : String(cause);
       return {
         ok: false,
