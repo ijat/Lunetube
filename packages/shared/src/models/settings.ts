@@ -59,7 +59,7 @@ export const THUMBNAIL_CACHE_MB_MIN = 64;
 
 export interface Settings {
   theme: AccentTheme;
-  /** Glass material opacity, 0..1. Default 0.7 (PRD §7 + decision A4). */
+  /** Glass material opacity, 0.4..1 (`clampGlassLevel`). Default 0.7 (PRD §7 + decision A4). */
   glassLevel: number;
   motion: MotionPreference;
   defaultQuality: QualityPreference;

@@ -20,8 +20,9 @@ const OUT_FILE = join(here, '..', 'src', 'themes', 'generated', 'themes.css');
 /**
  * Canonical ordered accent-theme id list. MUST stay in sync with
  * `ACCENT_THEMES` in `packages/shared/src/models/settings.ts` — the
- * `accent themes stay in sync` test in `src/__tests__/tokens.test.ts` fails
- * the build if the two, the source JSONs, or the generated CSS ever drift.
+ * `accent themes stay in sync` test in
+ * `apps/desktop/src/renderer/theme-ids.test.ts` fails the build if the two, the
+ * source JSONs, or the generated CSS ever drift.
  */
 const THEME_ORDER = ['blue', 'purple', 'green', 'orange', 'dark-modern'];
 
