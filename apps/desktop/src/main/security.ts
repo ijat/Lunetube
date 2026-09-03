@@ -5,7 +5,7 @@ import { shell, type BrowserWindow, type Session } from 'electron';
  * only; in `electron-vite dev` the renderer is served over http with HMR, which
  * needs a looser policy.
  */
-const PROD_CSP = [
+export const PROD_CSP = [
   "default-src 'none'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",

@@ -26,9 +26,8 @@ function saveBounds(win: BrowserWindow): void {
 
 export interface CreateWindowOptions {
   preloadPath: string;
-  rendererUrl: string | undefined;
-  rendererFile: string;
-  isDev: boolean;
+  loadUrl: string;
+  appOrigin: string;
 }
 
 let mainWindow: BrowserWindow | null = null;
@@ -63,7 +62,7 @@ export function createMainWindow(opts: CreateWindowOptions): BrowserWindow {
     },
   });
 
-  hardenWindow(win, { appOrigin: opts.rendererUrl ?? 'file://' });
+  hardenWindow(win, { appOrigin: opts.appOrigin });
 
   win.once('ready-to-show', () => win.show());
   win.on('close', () => saveBounds(win));
@@ -71,11 +70,7 @@ export function createMainWindow(opts: CreateWindowOptions): BrowserWindow {
     mainWindow = null;
   });
 
-  if (opts.rendererUrl) {
-    void win.loadURL(opts.rendererUrl);
-  } else {
-    void win.loadFile(opts.rendererFile);
-  }
+  void win.loadURL(opts.loadUrl);
 
   mainWindow = win;
   return win;
