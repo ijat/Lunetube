@@ -1,0 +1,25 @@
+{
+  "name": "@lunetube/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@lunetube/design": "workspace:*",
+    "@lunetube/shared": "workspace:*",
+    "@electron-toolkit/utils": "^4.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "lucide-react": "^1.39.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.3",
+    "zustand": "^5.0.15"
+  }
+}

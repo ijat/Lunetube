@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./node_modules/.cache/tsc-web",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "jsx": "react-jsx",
+    "moduleResolution": "bundler",
+    "noEmit": true
+  },
+  "references": [{ "path": "../../packages/shared" }, { "path": "../../packages/design" }],
+  "include": ["src/renderer/**/*"]
+}

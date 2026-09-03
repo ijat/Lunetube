@@ -3,6 +3,7 @@
   "references": [
     { "path": "./tsconfig.tools.json" },
     { "path": "./packages/shared" },
-    { "path": "./packages/design" }
+    { "path": "./packages/design" },
+    { "path": "./apps/desktop" }
   ]
 }
