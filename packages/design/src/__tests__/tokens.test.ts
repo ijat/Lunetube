@@ -46,6 +46,22 @@ describe('generated theme CSS', () => {
     expect(generatedThemes).toContain('--glass-opacity-option: 0.85');
     expect(generatedThemes).toContain('--glass-opacity-option: 0.98');
   });
+
+  it('emits a per-theme --glass-tint-rgb that differs blue vs purple (F8)', () => {
+    const tintFor = (theme: string) => {
+      const block = generatedThemes.slice(generatedThemes.indexOf(`[data-theme='${theme}']`));
+      return /--glass-tint-rgb:\s*([^;]+);/.exec(block)?.[1]?.trim();
+    };
+    // blue GlassTintColor #FF0A121F -> 10 18 31; purple #140A1F -> 20 10 31
+    expect(tintFor('blue')).toBe('10 18 31');
+    expect(tintFor('purple')).toBe('20 10 31');
+    expect(tintFor('blue')).not.toBe(tintFor('purple'));
+  });
+
+  it('no longer hardcodes --accent-ink per theme (F17 — it lives once in base.css)', () => {
+    expect(generatedThemes).not.toContain('--accent-ink');
+    expect(read('tokens/base.css')).toContain('--accent-ink:');
+  });
 });
 
 describe('typography lock (PRD §7)', () => {
@@ -67,6 +83,13 @@ describe('glass material opacity (decision A4)', () => {
   it('defaults --glass-material-opacity to 0.7', () => {
     const glass = read('tokens/glass.css');
     expect(glass).toMatch(/--glass-material-opacity:\s*0\.7\s*;/);
+  });
+
+  it('centralises every blur value as a token, including the top bar (F8)', () => {
+    const glass = read('tokens/glass.css');
+    expect(glass).toMatch(/--blur-bar:\s*24px\s*;/);
+    // .glass-root reads the per-theme tint token, not a hardcoded colour.
+    expect(glass).toContain('rgb(var(--glass-tint-rgb) / var(--glass-material-opacity))');
   });
 });
 

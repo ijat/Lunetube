@@ -8,7 +8,10 @@ export default defineConfig({
         test: {
           name: 'node',
           environment: 'node',
-          include: ['packages/*/src/**/*.{test,spec}.ts'],
+          include: [
+            'packages/*/src/**/*.{test,spec}.ts',
+            'apps/desktop/src/{main,preload}/**/*.{test,spec}.ts',
+          ],
         },
       },
       {

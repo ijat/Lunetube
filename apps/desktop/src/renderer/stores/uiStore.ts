@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import { ACCENT_THEMES, DEFAULT_SETTINGS, type AccentTheme, type Settings } from '@lunetube/shared';
+import { bridge } from '../bridge.js';
+import {
+  ACCENT_THEMES,
+  DEFAULT_SETTINGS,
+  clampGlassLevel,
+  type AccentTheme,
+  type Settings,
+} from '@lunetube/shared';
 
 interface UiState {
   theme: AccentTheme;
@@ -25,17 +32,15 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   hydrate: (settings) => {
     applyTheme(settings.theme);
-    document.documentElement.style.setProperty(
-      '--glass-material-opacity',
-      String(settings.glassLevel),
-    );
-    set({ theme: settings.theme, glassLevel: settings.glassLevel, settingsLoaded: true });
+    const glassLevel = clampGlassLevel(settings.glassLevel);
+    document.documentElement.style.setProperty('--glass-material-opacity', String(glassLevel));
+    set({ theme: settings.theme, glassLevel, settingsLoaded: true });
   },
 
   setTheme: (theme) => {
     applyTheme(theme);
     set({ theme });
-    void window.lune.invoke('app:setSettings', { patch: { theme } });
+    void bridge().invoke('app:setSettings', { patch: { theme } });
   },
 
   cycleTheme: () => {
@@ -45,10 +50,10 @@ export const useUiStore = create<UiState>((set, get) => ({
   },
 
   setGlassLevel: (glassLevel) => {
-    const clamped = Math.min(1, Math.max(0.4, glassLevel));
+    const clamped = clampGlassLevel(glassLevel);
     document.documentElement.style.setProperty('--glass-material-opacity', String(clamped));
     set({ glassLevel: clamped });
-    void window.lune.invoke('app:setSettings', { patch: { glassLevel: clamped } });
+    void bridge().invoke('app:setSettings', { patch: { glassLevel: clamped } });
   },
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),

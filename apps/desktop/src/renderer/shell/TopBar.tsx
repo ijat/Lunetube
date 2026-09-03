@@ -1,6 +1,7 @@
 import { type FormEvent } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Settings2, User } from 'lucide-react';
+import { bridge } from '../bridge.js';
 import { useUiStore } from '../stores/uiStore.js';
 
 /**
@@ -9,7 +10,7 @@ import { useUiStore } from '../stores/uiStore.js';
  * interactive children opt out with `.no-drag`.
  */
 const NAV = [
-  { to: '/', label: 'Home', end: true },
+  { to: '/', label: 'Home' },
   { to: '/library?tab=following', label: 'Following' },
   { to: '/library?tab=history', label: 'History' },
   { to: '/library?tab=playlists', label: 'Playlists' },
@@ -17,8 +18,16 @@ const NAV = [
 
 export function TopBar() {
   const navigate = useNavigate();
+  const { pathname, search } = useLocation();
   const query = useUiStore((s) => s.searchQuery);
   const setQuery = useUiStore((s) => s.setSearchQuery);
+
+  // Active state must account for the query string — Following / History /
+  // Playlists all live at `/library` and differ only by `?tab=` (F7).
+  const isNavActive = (to: string): boolean => {
+    const target = new URL(to, 'app://x');
+    return pathname === target.pathname && (target.search === '' || search === target.search);
+  };
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -28,7 +37,7 @@ export function TopBar() {
 
   return (
     <header className="topbar">
-      {window.lune.platform === 'darwin' && <div className="topbar__traffic" aria-hidden="true" />}
+      {bridge().platform === 'darwin' && <div className="topbar__traffic" aria-hidden="true" />}
 
       <NavLink to="/" className="topbar__wordmark no-drag" end>
         Lune<span>Tube</span>
@@ -46,16 +55,19 @@ export function TopBar() {
       </form>
 
       <nav className="topbar__nav no-drag">
-        {NAV.map((item) => (
-          <NavLink
-            key={item.label}
-            to={item.to}
-            end={item.end ?? false}
-            className={({ isActive }) => (isActive ? 'is-active' : undefined)}
-          >
-            {item.label}
-          </NavLink>
-        ))}
+        {NAV.map((item) => {
+          const active = isNavActive(item.to);
+          return (
+            <Link
+              key={item.label}
+              to={item.to}
+              className={active ? 'is-active' : undefined}
+              aria-current={active ? 'page' : undefined}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="topbar__right no-drag">

@@ -5,12 +5,40 @@ import type { WindowBounds, WindowState } from '@lunetube/shared';
 import { hardenWindow } from '../security.js';
 
 const TOPBAR_H = 44;
+const MIN_WIDTH = 880;
+const MIN_HEIGHT = 600;
 const boundsPath = () => join(app.getPath('userData'), 'window-state.json');
 
-function loadBounds(): WindowBounds | null {
+const isNum = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+
+/** True if the rect overlaps some connected display's work area (F3). */
+function isOnSomeDisplay(b: WindowBounds): boolean {
+  return screen.getAllDisplays().some((d) => {
+    const w = d.workArea;
+    return (
+      b.x < w.x + w.width && b.x + b.width > w.x && b.y < w.y + w.height && b.y + b.height > w.y
+    );
+  });
+}
+
+/**
+ * Restore persisted size always (clamped to the minimums); restore the position
+ * only when all four bounds are finite AND the window would land on a currently
+ * connected display — otherwise drop x/y and let Electron centre it, so a
+ * frameless window can never restore fully off-screen after a monitor change.
+ */
+function loadBounds(): Partial<WindowBounds> | null {
   try {
-    const b = JSON.parse(readFileSync(boundsPath(), 'utf8')) as WindowBounds;
-    if ([b.x, b.y, b.width, b.height].every((n) => typeof n === 'number')) return b;
+    const b = JSON.parse(readFileSync(boundsPath(), 'utf8')) as Partial<WindowBounds>;
+    if (!isNum(b.width) || !isNum(b.height)) return null;
+    const size = {
+      width: Math.max(MIN_WIDTH, Math.round(b.width)),
+      height: Math.max(MIN_HEIGHT, Math.round(b.height)),
+    };
+    if (isNum(b.x) && isNum(b.y) && isOnSomeDisplay({ x: b.x, y: b.y, ...size })) {
+      return { ...size, x: b.x, y: b.y };
+    }
+    return size;
   } catch {
     /* first launch */
   }
@@ -41,9 +69,9 @@ export function createMainWindow(opts: CreateWindowOptions): BrowserWindow {
   const win = new BrowserWindow({
     width: saved?.width ?? 1280,
     height: saved?.height ?? 820,
-    ...(saved ? { x: saved.x, y: saved.y } : {}),
-    minWidth: 880,
-    minHeight: 600,
+    ...(saved && saved.x !== undefined && saved.y !== undefined ? { x: saved.x, y: saved.y } : {}),
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
     show: false,
     frame: false,
     backgroundColor: '#0a0d13',

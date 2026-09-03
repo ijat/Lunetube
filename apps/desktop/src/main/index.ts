@@ -8,6 +8,11 @@ import { registerAppIpc } from './ipc/app.js';
 const devUrl = process.env['ELECTRON_RENDERER_URL'];
 const isDev = !!devUrl;
 
+// Must run before anything reads `app.getPath('userData')` (F16): the default
+// name comes from package.json `name` (`@lunetube/desktop`, which has a slash),
+// and Electron resolves the userData path early.
+app.setName('LuneTube');
+
 if (!isDev) registerAppProtocolScheme();
 
 function spawnWindow(): void {
@@ -30,7 +35,6 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
-    app.setName('LuneTube');
     installSessionSecurity(session.defaultSession, { isDev });
     if (!isDev) serveRenderer(join(__dirname, '../renderer'));
     registerAppIpc();

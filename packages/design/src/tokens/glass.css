@@ -10,12 +10,15 @@
   --glass-material-opacity: 0.7;
   --blur-root: 30px;
   --blur-panel: 18px;
+  --blur-bar: 24px;
+  /* Fallback tint until a [data-theme] block sets --glass-tint-rgb (themes.css). */
+  --glass-tint-rgb: 10 13 19;
   --glass-hairline: 1px solid var(--stroke);
   --glass-inner-highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
 
 .glass-root {
-  background: rgb(10 13 19 / var(--glass-material-opacity));
+  background: rgb(var(--glass-tint-rgb) / var(--glass-material-opacity));
   backdrop-filter: blur(var(--blur-root)) saturate(150%);
   -webkit-backdrop-filter: blur(var(--blur-root)) saturate(150%);
 }

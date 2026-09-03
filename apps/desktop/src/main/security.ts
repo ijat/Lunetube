@@ -27,13 +27,26 @@ export function installSessionSecurity(session: Session, { isDev }: { isDev: boo
     });
   }
 
-  // Deny every permission except the two the player genuinely needs.
+  // Deny every permission except the one the player genuinely needs. `'media'`
+  // is the getUserMedia capture grant (camera/mic) — never needed for <video>
+  // playback of proxied/blob media, so it stays denied (F5).
   session.setPermissionRequestHandler((_wc, permission, callback) => {
-    callback(permission === 'fullscreen' || permission === 'media');
+    callback(permission === 'fullscreen');
   });
   session.setPermissionCheckHandler((_wc, permission) => {
-    return permission === 'fullscreen' || permission === 'media';
+    return permission === 'fullscreen';
   });
+}
+
+/** Origin of a URL as `protocol//host` — works for non-special schemes like
+ * `app:` where `URL.origin` is the opaque string `"null"` (F6). */
+export function originOf(url: string): string | null {
+  try {
+    const u = new URL(url);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return null;
+  }
 }
 
 export function hardenWindow(win: BrowserWindow, { appOrigin }: { appOrigin: string }): void {
@@ -43,8 +56,9 @@ export function hardenWindow(win: BrowserWindow, { appOrigin }: { appOrigin: str
     return { action: 'deny' };
   });
 
-  // Pin in-app navigation to the app origin.
+  // Pin in-app navigation to the app origin (real origin comparison, not a
+  // prefix test — `app://bundle.evil/` must not pass, F6).
   win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(appOrigin)) event.preventDefault();
+    if (originOf(url) !== appOrigin) event.preventDefault();
   });
 }
