@@ -17,11 +17,27 @@ const here = dirname(fileURLToPath(import.meta.url));
 const SOURCE_DIR = join(here, '..', 'src', 'themes', 'source');
 const OUT_FILE = join(here, '..', 'src', 'themes', 'generated', 'themes.css');
 
+/**
+ * Canonical ordered accent-theme id list. MUST stay in sync with
+ * `ACCENT_THEMES` in `packages/shared/src/models/settings.ts` — the
+ * `accent themes stay in sync` test in `src/__tests__/tokens.test.ts` fails
+ * the build if the two, the source JSONs, or the generated CSS ever drift.
+ */
 const THEME_ORDER = ['blue', 'purple', 'green', 'orange', 'dark-modern'];
+
+class ThemeCodegenError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ThemeCodegenError';
+  }
+}
 
 /** `#AARRGGBB` | `#RRGGBB` -> `{ r, g, b, a }` (a in 0..1). */
 function parseColor(hex) {
   const h = hex.trim().replace(/^#/, '');
+  if (!/^[0-9a-f]{6}([0-9a-f]{2})?$/i.test(h)) {
+    throw new ThemeCodegenError(`Malformed hex colour: "${hex}"`);
+  }
   if (h.length === 8) {
     const a = parseInt(h.slice(0, 2), 16) / 255;
     return {
@@ -31,15 +47,12 @@ function parseColor(hex) {
       a: Math.round(a * 1000) / 1000,
     };
   }
-  if (h.length === 6) {
-    return {
-      r: parseInt(h.slice(0, 2), 16),
-      g: parseInt(h.slice(2, 4), 16),
-      b: parseInt(h.slice(4, 6), 16),
-      a: 1,
-    };
-  }
-  throw new Error(`Unrecognised colour value: "${hex}"`);
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+    a: 1,
+  };
 }
 
 const toCss = ({ r, g, b, a }) => `rgb(${r} ${g} ${b} / ${a})`;
@@ -61,14 +74,22 @@ function blockFor(name, json) {
   }
 
   // App-vocabulary aliases derived from the Lunegit accent.
+  if (!json.colors || typeof json.colors.AccentPrimaryColor !== 'string') {
+    throw new ThemeCodegenError(`Theme "${name}" is missing colors.AccentPrimaryColor`);
+  }
   const accent = parseColor(json.colors.AccentPrimaryColor);
   const { r, g, b } = accent;
   lines.push(`  --accent: ${toCss({ ...accent, a: 1 })};`);
   lines.push(`  --accent-rgb: ${r} ${g} ${b};`);
-  lines.push(`  --accent-ink: rgb(10 13 19 / 1);`);
+  // `--accent-ink` is a design-system constant, defined once in base.css (F17).
   lines.push(`  --glow: rgb(${r} ${g} ${b} / 0.32);`);
   lines.push(`  --wash-a: rgb(${r} ${g} ${b} / 0.20);`);
   lines.push(`  --wash-b: rgb(${r} ${g} ${b} / 0.13);`);
+  // Per-theme glass tint, consumed by `.glass-root` in glass.css (F8).
+  if (typeof json.colors.GlassTintColor === 'string') {
+    const tint = parseColor(json.colors.GlassTintColor);
+    lines.push(`  --glass-tint-rgb: ${tint.r} ${tint.g} ${tint.b};`);
+  }
   // Per-theme glass opacity is exposed as an option for the PRD §9 "glass level"
   // setting; the active default stays 0.7 in glass.css (decision A4).
   const glassOption = json.acrylic?.GlassMaterialDarkOpacity ?? 0.85;
@@ -82,10 +103,21 @@ function main() {
   const files = readdirSync(SOURCE_DIR).filter((f) => f.endsWith('.json'));
   const byName = new Map(files.map((f) => [basename(f, '.json'), f]));
 
-  const ordered = [
-    ...THEME_ORDER.filter((n) => byName.has(n)),
-    ...[...byName.keys()].filter((n) => !THEME_ORDER.includes(n)).sort(),
-  ];
+  const unknown = [...byName.keys()].filter((n) => !THEME_ORDER.includes(n));
+  if (unknown.length > 0) {
+    throw new ThemeCodegenError(
+      `Theme JSON(s) ${unknown.map((n) => `"${n}"`).join(', ')} not in THEME_ORDER — ` +
+        `add the id to THEME_ORDER here and to ACCENT_THEMES in packages/shared.`,
+    );
+  }
+  const missing = THEME_ORDER.filter((n) => !byName.has(n));
+  if (missing.length > 0) {
+    throw new ThemeCodegenError(
+      `THEME_ORDER lists ${missing.map((n) => `"${n}"`).join(', ')} with no src/themes/source/*.json.`,
+    );
+  }
+
+  const ordered = [...THEME_ORDER];
 
   const blocks = ordered.map((name) => {
     const json = JSON.parse(readFileSync(join(SOURCE_DIR, byName.get(name)), 'utf8'));

@@ -59,9 +59,10 @@ connect/img/media add `http://127.0.0.1:*` for the Phase 1 proxy). Served as a
   privileged `standard`/`secure` scheme rather than bare `file://`, so
   `script-src 'self'` has an unambiguous origin.
 - `setPermissionRequestHandler` / `setPermissionCheckHandler` — deny everything
-  except `fullscreen` and `media`.
+  except `fullscreen` (`<video>` playback needs no capture permission).
 - `setWindowOpenHandler` → `deny` + `shell.openExternal` for `https:` only.
-- `will-navigate` guard pinned to the app origin.
+- `will-navigate` guard pinned to the app origin by real origin comparison
+  (`protocol//host`, since `URL.origin` is `"null"` for the `app:` scheme).
 
 ### The `window.lune` bridge
 
@@ -79,7 +80,13 @@ Channel names live in one `CHANNELS` / `EVENT_CHANNELS` object in
 `packages/shared/src/ipc.ts` — main and preload both import it, so they cannot
 drift. The preload allow-lists every channel. `defineHandler` in
 `apps/desktop/src/main/ipc/registry.ts` wraps each handler so a thrown error
-becomes `{ ok: false, error: LuneError }` and never crosses as a raw stack.
+becomes `{ ok: false, error: LuneError }` and never crosses as a raw stack, and
+takes an optional `validate(payload)` to narrow the untrusted renderer payload
+(decision A9). `app:setSettings` additionally re-validates every field in
+`settings.ts#coerce` (type + range + enum + `https:` checks, unknown keys
+dropped) before anything reaches disk. `window.lune` is reached only through
+`renderer/bridge.ts` (`bridge()` / `hasBridge()`), which surfaces a preload-load
+failure as a visible error screen rather than a blank window.
 
 The full IPC table (per phase) is the plan's "Full IPC surface" section; the
 typed maps in `ipc.ts` grow to match as phases land.
@@ -125,10 +132,16 @@ is a named, empty slot.
   Grotesque large-display only, **no fixed-pitch family anywhere** — numerals get
   `.tnum` (`font-variant-numeric: tabular-nums`). A design guard test enforces
   no `/mono(space)?/i` in the token layer.
-- Glass: two blur layers max (PRD §7 budget). `--glass-material-opacity` defaults
-  to `0.7` (decision A4); each theme also exposes `--glass-opacity-option` for
-  the "glass level" setting.
+- Glass: two blur layers max (PRD §7 budget). All blur values are tokens
+  (`--blur-root` / `--blur-panel` / `--blur-bar`). `--glass-material-opacity`
+  defaults to `0.7` (decision A4); `.glass-root` tints with the per-theme
+  `--glass-tint-rgb`; each theme also exposes `--glass-opacity-option` for the
+  "glass level" setting.
 - Fonts are self-hosted (decision A7) — no `fonts.googleapis.com`.
+- The accent-theme id set has one home: `ACCENT_THEMES` / `ACCENT_THEME_LABELS`
+  in `@lunetube/shared`. `gen-theme-css.mjs` throws on any source-JSON /
+  `THEME_ORDER` mismatch, and `renderer/theme-ids.test.ts` fails CI if the
+  generated CSS drifts from `ACCENT_THEMES`.
 
 ## Version pins that are load-bearing (plan F6 / R7)
 

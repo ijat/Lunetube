@@ -35,16 +35,34 @@ export default tseslint.config(
       globals: { ...globals.node },
     },
     rules: {
+      // Static `import`/`export … from 'youtubei.js'`.
       'no-restricted-imports': [
         'error',
         {
-          paths: [youtubeiRestriction],
           patterns: [
             {
               group: ['youtubei.js', 'youtubei.js/**'],
               message: youtubeiRestriction.message,
             },
           ],
+        },
+      ],
+      // Dynamic `import('youtubei.js')`, `require('youtubei.js')`, and the
+      // `import('youtubei.js')` type form — `no-restricted-imports` covers none
+      // of these (F1).
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportExpression[source.value=/^youtubei\\.js/]',
+          message: youtubeiRestriction.message,
+        },
+        {
+          selector: "CallExpression[callee.name='require'][arguments.0.value=/^youtubei\\.js/]",
+          message: youtubeiRestriction.message,
+        },
+        {
+          selector: 'TSImportType[source.value=/^youtubei\\.js/]',
+          message: youtubeiRestriction.message,
         },
       ],
       '@typescript-eslint/no-unused-vars': [
@@ -57,6 +75,7 @@ export default tseslint.config(
     files: ['packages/youtube/src/innertube/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': 'off',
+      'no-restricted-syntax': 'off',
     },
   },
   {

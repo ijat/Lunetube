@@ -1,7 +1,8 @@
-import { Panel, Segmented, Slider, THEME_IDS, THEME_LABELS, type ThemeId } from '@lunetube/design';
+import { Panel, Segmented, Slider } from '@lunetube/design';
+import { ACCENT_THEMES, ACCENT_THEME_LABELS, type AccentTheme } from '@lunetube/shared';
 import { useUiStore } from '../../stores/uiStore.js';
 
-const THEME_OPTIONS = THEME_IDS.map((id) => ({ value: id, label: THEME_LABELS[id] }));
+const THEME_OPTIONS = ACCENT_THEMES.map((id) => ({ value: id, label: ACCENT_THEME_LABELS[id] }));
 
 export function SettingsRoute() {
   const theme = useUiStore((s) => s.theme);
@@ -17,7 +18,7 @@ export function SettingsRoute() {
       <Panel className="glass-panel" style={{ display: 'grid', gap: 20, maxWidth: 560 }}>
         <div style={{ display: 'grid', gap: 8 }}>
           <label style={{ fontSize: 13, color: 'var(--fg-2)' }}>Accent theme</label>
-          <Segmented<ThemeId>
+          <Segmented<AccentTheme>
             options={THEME_OPTIONS}
             value={theme}
             onChange={setTheme}

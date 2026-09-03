@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { join, normalize } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 import { protocol } from 'electron';
 import { PROD_CSP } from './security.js';
 
@@ -22,6 +22,46 @@ const MIME: Record<string, string> = {
   '.map': 'application/json',
 };
 
+export interface ResolvedAsset {
+  /** Absolute path, guaranteed to be inside `rendererDir`. */
+  filePath: string;
+  /** Lower-cased extension including the dot, or `''` when there is none. */
+  ext: string;
+}
+
+/**
+ * Pure URL → filesystem-path mapping for the `app://` handler (F9). Returns
+ * `null` for an unparseable URL or any path that would escape `rendererDir`.
+ * The containment guarantee is the `resolve()` + separator anchor, not a
+ * prefix `startsWith` on an unnormalised join.
+ */
+export function resolveAssetPath(rendererDir: string, requestUrl: string): ResolvedAsset | null {
+  let pathname: string;
+  try {
+    pathname = new URL(requestUrl).pathname;
+  } catch {
+    return null;
+  }
+
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return null;
+  }
+
+  // Strip leading `/` and any `../` prefixes so the value can never be absolute
+  // or climb out when handed to `resolve()`.
+  const rel = normalize(decoded).replace(/^([/\\]|\.\.[/\\])+/, '');
+  const target = rel === '' || rel === '.' ? 'index.html' : rel;
+  const filePath = resolve(rendererDir, target);
+
+  if (filePath !== rendererDir && !filePath.startsWith(rendererDir + sep)) {
+    return null;
+  }
+  return { filePath, ext: extname(filePath).toLowerCase() };
+}
+
 export function registerAppProtocolScheme(): void {
   protocol.registerSchemesAsPrivileged([
     {
@@ -32,27 +72,28 @@ export function registerAppProtocolScheme(): void {
 }
 
 export function serveRenderer(rendererDir: string): void {
+  const htmlHeaders = { 'content-type': 'text/html', 'content-security-policy': PROD_CSP };
+
   protocol.handle(APP_SCHEME, async (request) => {
-    const { pathname } = new URL(request.url);
-    const rel = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, '');
-    const filePath = join(rendererDir, rel === '/' || rel === '' ? 'index.html' : rel);
+    const asset = resolveAssetPath(rendererDir, request.url);
+    if (!asset) return new Response('Bad Request', { status: 400 });
 
-    if (!filePath.startsWith(rendererDir)) {
-      return new Response('Forbidden', { status: 403 });
-    }
-
-    const htmlHeaders = { 'content-type': 'text/html', 'content-security-policy': PROD_CSP };
     try {
-      const body = await readFile(filePath);
-      const ext = filePath.slice(filePath.lastIndexOf('.'));
-      const contentType = MIME[ext] ?? 'application/octet-stream';
+      const body = await readFile(asset.filePath);
       const headers: Record<string, string> =
-        ext === '.html' ? htmlHeaders : { 'content-type': contentType };
+        asset.ext === '.html'
+          ? htmlHeaders
+          : { 'content-type': MIME[asset.ext] ?? 'application/octet-stream' };
       return new Response(new Uint8Array(body), { headers });
     } catch {
-      // SPA fallback so deep links work.
-      const html = await readFile(join(rendererDir, 'index.html'));
-      return new Response(new Uint8Array(html), { headers: htmlHeaders });
+      // SPA fallback only for navigable requests — a genuinely missing JS/CSS
+      // asset must surface as a real 404, not as HTML the renderer then fails
+      // to parse (F9).
+      if (asset.ext === '' || asset.ext === '.html') {
+        const html = await readFile(join(rendererDir, 'index.html'));
+        return new Response(new Uint8Array(html), { headers: htmlHeaders });
+      }
+      return new Response('Not Found', { status: 404 });
     }
   });
 }
