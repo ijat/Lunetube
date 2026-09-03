@@ -69,8 +69,12 @@ export interface IpcEvents {
 
 export type IpcEventChannel = keyof IpcEvents;
 
+export type HostPlatform = 'darwin' | 'win32' | 'linux';
+
 /** The one object preload exposes on `window.lune`. */
 export interface LuneBridge {
+  /** Host OS — the renderer is sandboxed and has no `process`. */
+  readonly platform: HostPlatform;
   invoke<K extends IpcChannel>(channel: K, payload: IpcRequests[K]): Promise<IpcResponse<K>>;
   on<K extends IpcEventChannel>(channel: K, listener: (payload: IpcEvents[K]) => void): () => void;
 }
