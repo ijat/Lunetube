@@ -38,16 +38,16 @@ import {
   type SearchParams,
   type YouTubeSource,
 } from '../contract.js';
-import { CLIENT_LADDER } from '../innertube/clients.js';
+import { CLIENT_LADDER, ladderSkipReason } from '../innertube/clients.js';
 import { mapPlayabilityStatus, notImplemented } from '../innertube/errors.js';
-import { mapChapters } from '../innertube/map/chapters.js';
-import {
-  mapAudioTracks,
-  mapCaptionTracks,
-  mapStoryboards,
-  mapVideoTracks,
-} from '../innertube/map/streams.js';
-import { mapDescription, mapFeedVideos, mapVideoDetail } from '../innertube/map/video.js';
+import { mapFeedVideos, mapVideoDetail } from '../innertube/map/video.js';
+import { ClassicDashStrategy } from '../playback/classicDash.js';
+import type {
+  DashRequest,
+  PlaybackInfo,
+  PlaybackStrategy,
+  UrlRewriter,
+} from '../playback/strategy.js';
 import { defaultFixturesDir, loadVideoFixtures, type VideoFixture } from './fixtures.js';
 
 export interface FakeYouTubeSourceOptions {
@@ -57,14 +57,14 @@ export interface FakeYouTubeSourceOptions {
   rewriters?: Partial<MediaUrlRewriters>;
 }
 
-const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
-
 export class FakeYouTubeSource implements YouTubeSource {
   readonly #fixtures: Map<string, VideoFixture>;
-  readonly #media: (url: URL) => URL;
-  readonly #image: (url: URL) => URL;
-  readonly #caption: (url: URL) => URL;
+  readonly #media: UrlRewriter;
+  readonly #image: UrlRewriter;
+  readonly #caption: UrlRewriter;
+  readonly #strategy: PlaybackStrategy = new ClassicDashStrategy();
   #lastClient: string | null = null;
+  #lastExpiresAt: number | null = null;
 
   constructor(opts: FakeYouTubeSourceOptions = {}) {
     this.#fixtures = loadVideoFixtures(opts.fixturesDir ?? defaultFixturesDir());
@@ -96,46 +96,43 @@ export class FakeYouTubeSource implements YouTubeSource {
     return ok(detail);
   }
 
+  /**
+   * Runs the **real** `ClassicDashStrategy` over fixture data, with a
+   * fixture-backed `toDash` standing in for youtubei.js' generator. That is
+   * what makes the fake worth having: CI exercises the actual assembly, the
+   * actual URL-rewriting dispatch and the actual expiry rules, and the fake
+   * cannot quietly diverge from the InnerTube path (it cannot, for instance,
+   * "support" a live stream the real strategy refuses).
+   */
   async getStreams(params: {
     videoId: string;
     prefs: StreamPrefs;
   }): Promise<Result<StreamManifest, LuneError>> {
-    void params.prefs;
     const fixture = this.#find(params.videoId);
     if (fixture == null) return err(this.#notFound(params.videoId));
 
     const playErr = mapPlayabilityStatus(fixture.playability_status);
     if (playErr != null) return err(playErr);
 
-    const adaptive = fixture.streaming_data?.adaptive_formats ?? [];
-    const video = mapVideoTracks(adaptive, this.#media);
-    const audio = mapAudioTracks(adaptive, this.#media);
-    if (video.length === 0 && audio.length === 0) {
-      return err(
-        makeLuneError('YT_UNAVAILABLE', 'Fixture has no playable formats.', {
-          detail: 'fake:no-streaming-data',
-          hint: 'This mirrors a video whose streaming_data is missing.',
-        }),
-      );
-    }
+    const client = fixture.meta?.client ?? 'IOS';
+    const info: PlaybackInfo = {
+      ...fixture,
+      toDash: (options?: DashRequest) => Promise.resolve(renderFixtureDash(fixture, options)),
+    };
 
-    const durationSec = numberOr(fixture.basic_info?.duration, 0);
-    const description = mapDescription(fixture);
-    this.#lastClient = fixture.meta?.client ?? 'IOS';
-
-    return ok({
-      kind: 'dash',
-      manifestXml: fixture.dash_manifest_xml ?? synthesizeDash(video, audio, durationSec),
-      video,
-      audio,
-      captions: mapCaptionTracks(fixture.captions, this.#caption),
-      storyboards: mapStoryboards(fixture.storyboards, this.#image),
-      chapters: mapChapters({ overlays: fixture.player_overlays, description, durationSec }),
-      isLive: fixture.basic_info?.is_live === true,
-      durationSec,
-      expiresAt: fixtureExpiry(fixture.streaming_data),
-      client: this.#lastClient,
+    const result = await this.#strategy.resolve(info, {
+      client,
+      prefs: params.prefs,
+      rewriteMedia: this.#media,
+      rewriteImage: this.#image,
+      rewriteCaption: this.#caption,
     });
+
+    if (result.ok) {
+      this.#lastClient = client;
+      this.#lastExpiresAt = result.value.expiresAt;
+    }
+    return result;
   }
 
   async getRelated(params: GetRelatedParams): Promise<Result<Paged<VideoSummary>, LuneError>> {
@@ -152,11 +149,12 @@ export class FakeYouTubeSource implements YouTubeSource {
     return ok({
       youtubeiVersion: 'fake',
       lastClient: this.#lastClient,
+      lastExpiresAt: this.#lastExpiresAt,
       ladder: CLIENT_LADDER.map((entry) => ({
         client: entry.client,
         ok: entry.client === this.#lastClient,
         formats: 0,
-        lastError: null,
+        lastError: ladderSkipReason(entry),
       })),
     });
   }
@@ -188,55 +186,91 @@ export class FakeYouTubeSource implements YouTubeSource {
   }
 }
 
-function numberOr(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
+/**
+ * A stand-in for youtubei.js' DASH generator, faithful in the ways that matter
+ * to the code under test:
+ *
+ *  - it applies `url_transformer` to **every** URL it emits, media and caption
+ *    alike, because the real generator does (v18.0.0
+ *    `utils/StreamingInfo.js#getTextSets`) — so the fake exercises the
+ *    strategy's per-route dispatch rather than assuming it;
+ *  - it only emits caption tracks when `captions_format` is set, as the real
+ *    one does, and appends `fmt=` the same way;
+ *  - it emits no image/storyboard sets, matching a `toDash()` call that leaves
+ *    `include_thumbnails` unset.
+ *
+ * A fixture's recorded `dash_manifest_xml` is deliberately **not** used here:
+ * `scripts/record-fixtures.mjs` writes it with redacted URLs already baked in,
+ * so it cannot be re-transformed, and handing shaka a manifest full of
+ * unrewritten googlevideo URLs is exactly the failure this step exists to
+ * prevent. It stays in the fixture as a recorded reference artifact.
+ */
+function renderFixtureDash(fixture: VideoFixture, options?: DashRequest): string {
+  const transform = options?.url_transformer ?? identityRewriter;
+  const captionsFormat = options?.manifest_options?.captions_format;
+  const formats = fixture.streaming_data?.adaptive_formats ?? [];
+  const durationSec = Number(fixture.basic_info?.duration) || 0;
 
-function fixtureExpiry(streamingData: { expires?: unknown } | null | undefined): number {
-  const expires = streamingData?.expires;
-  if (typeof expires === 'string') {
-    const t = Date.parse(expires);
-    if (Number.isFinite(t)) return t;
+  const rewrite = (raw: unknown, extraParams?: Record<string, string>): string | null => {
+    if (typeof raw !== 'string' || raw.length === 0) return null;
+    try {
+      const url = new URL(raw);
+      for (const [key, value] of Object.entries(extraParams ?? {})) {
+        url.searchParams.set(key, value);
+      }
+      return transform(url).toString();
+    } catch {
+      return null;
+    }
+  };
+
+  const sets: string[] = [];
+  for (const format of formats) {
+    const url = rewrite(format.url);
+    if (url == null) continue;
+    const mime = String(format.mime_type ?? '');
+    const contentType = mime.startsWith('audio/') ? 'audio' : 'video';
+    const container = mime.split(';')[0] ?? '';
+    const attrs =
+      contentType === 'video'
+        ? ` width="${Number(format.width) || 0}" height="${Number(format.height) || 0}" frameRate="${Number(format.fps) || 0}"`
+        : ` audioSamplingRate="${Number(format.audio_sample_rate) || 0}"`;
+    sets.push(
+      `    <AdaptationSet contentType="${contentType}" mimeType="${esc(container)}">\n` +
+        `      <Representation id="${esc(String(format.itag ?? ''))}" bandwidth="${Number(format.bitrate) || 0}"${attrs}>\n` +
+        `        <BaseURL>${esc(url)}</BaseURL>\n` +
+        `      </Representation>\n` +
+        `    </AdaptationSet>`,
+    );
   }
-  return Date.now() + FIVE_HOURS_MS;
-}
 
-function synthesizeDash(
-  video: {
-    id: string;
-    codec: string;
-    bitrate: number;
-    width: number;
-    height: number;
-    fps: number;
-    url: string;
-  }[],
-  audio: { id: string; codec: string; bitrate: number; url: string }[],
-  durationSec: number,
-): string {
-  const esc = (s: string): string =>
-    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const videoReps = video
-    .map(
-      (v) =>
-        `      <Representation id="${esc(v.id)}" codecs="${esc(v.codec)}" bandwidth="${v.bitrate}" width="${v.width}" height="${v.height}" frameRate="${v.fps}">\n        <BaseURL>${esc(v.url)}</BaseURL>\n      </Representation>`,
-    )
-    .join('\n');
-  const audioReps = audio
-    .map(
-      (a) =>
-        `      <Representation id="${esc(a.id)}" codecs="${esc(a.codec)}" bandwidth="${a.bitrate}">\n        <BaseURL>${esc(a.url)}</BaseURL>\n      </Representation>`,
-    )
-    .join('\n');
+  if (captionsFormat != null) {
+    for (const track of fixture.captions?.caption_tracks ?? []) {
+      const url = rewrite(track.base_url, { fmt: captionsFormat });
+      if (url == null) continue;
+      const lang = typeof track.language_code === 'string' ? track.language_code : '';
+      sets.push(
+        `    <AdaptationSet contentType="text" mimeType="${captionsFormat === 'vtt' ? 'text/vtt' : 'application/ttml+xml'}" lang="${esc(lang)}">\n` +
+          `      <Representation id="text-${esc(lang)}" bandwidth="0">\n` +
+          `        <BaseURL>${esc(url)}</BaseURL>\n` +
+          `      </Representation>\n` +
+          `    </AdaptationSet>`,
+      );
+    }
+  }
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static" mediaPresentationDuration="PT${Math.max(0, Math.round(durationSec))}S" minBufferTime="PT1.5S" profiles="urn:mpeg:dash:profile:isoff-main:2011">
   <Period>
-    <AdaptationSet contentType="video" mimeType="video/mp4">
-${videoReps}
-    </AdaptationSet>
-    <AdaptationSet contentType="audio" mimeType="audio/mp4">
-${audioReps}
-    </AdaptationSet>
+${sets.join('\n')}
   </Period>
 </MPD>`;
+}
+
+function esc(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }

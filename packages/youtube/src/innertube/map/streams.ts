@@ -1,14 +1,15 @@
 /**
  * Adaptive-format / caption / storyboard mappers. Pure — no I/O.
  *
- * These are the building blocks for `StreamManifest`. Phase 1 (P1-1) provides the
- * per-item mappers and a straightforward assembly in `source.ts`; P1-3 rewires
- * assembly behind the `PlaybackStrategy` seam (`toDash()` + URL-expiry recovery).
- * Keeping these pure and per-item is what makes the churn-prone streaming surface
- * cheap to fix.
+ * These are the building blocks for `StreamManifest`; assembly lives behind the
+ * `PlaybackStrategy` seam (`../../playback/`). Keeping them pure and per-item is
+ * what makes the churn-prone streaming surface cheap to fix — a YouTube
+ * response-shape change is a one-function edit with a unit test, not a debugging
+ * session inside an async pipeline.
  */
 import type { AudioTrack, CaptionTrack, StoryboardSpec, VideoTrack } from '@lunetube/shared';
 import {
+  expireParamMs,
   normalizeUrl,
   rewriteUrl,
   toIntOr,
@@ -16,6 +17,9 @@ import {
   type MaybeText,
   textToString,
 } from './util.js';
+
+/** Fallback stream lifetime when nothing in the response declares one. */
+export const DEFAULT_STREAM_TTL_MS = 5 * 60 * 60 * 1000;
 
 export interface RawFormat {
   itag?: unknown;
@@ -176,6 +180,67 @@ export function mapAudioTracks(
     .map((f, i) => mapAudioTrack(f, rewriteMedia, i))
     .filter((t): t is AudioTrack => t != null)
     .sort((a, b) => b.bitrate - a.bitrate);
+}
+
+export interface ExpiryInput {
+  /** `info.streaming_data` — may declare `expires` (a `Date`, or an ISO string in fixtures). */
+  streamingData?: RawStreamingData | null | undefined;
+  /** **Raw** adaptive formats, i.e. before any proxy rewriting (see `expireParamMs`). */
+  formats?: RawFormat[] | null | undefined;
+  /** Injectable clock for the fallback branch. */
+  now?: () => number;
+  /** Fallback lifetime. Defaults to `DEFAULT_STREAM_TTL_MS`. */
+  fallbackMs?: number;
+}
+
+/**
+ * When the manifest's media URLs stop working, as epoch ms.
+ *
+ * This value drives the renderer's pre-emptive re-resolve (plan P1-5), so it is
+ * deliberately **pessimistic: the earliest signal wins**. Re-resolving a minute
+ * early costs one cheap InnerTube call; re-resolving late costs a burst of 403s
+ * in the middle of playback, which is the failure mode plan R1/F3 calls out.
+ *
+ * Signals, all optional, minimum of whatever is present:
+ *  - the `expire` query parameter on each raw googlevideo URL (ground truth for
+ *    the URLs actually embedded in the manifest);
+ *  - `streaming_data.expires`, which youtubei.js derives from
+ *    `expiresInSeconds` at parse time.
+ *
+ * With no signal at all, `now + 5h` (plan P1-3).
+ */
+export function resolveExpiresAt(input: ExpiryInput): number {
+  const candidates: number[] = [];
+
+  if (Array.isArray(input.formats)) {
+    for (const format of input.formats) {
+      const expiry = expireParamMs(format.url);
+      if (expiry != null) candidates.push(expiry);
+    }
+  }
+
+  const declared = declaredExpiryMs(input.streamingData?.expires);
+  if (declared != null) candidates.push(declared);
+
+  if (candidates.length === 0) {
+    const now = input.now ?? Date.now;
+    return now() + (input.fallbackMs ?? DEFAULT_STREAM_TTL_MS);
+  }
+  return Math.min(...candidates);
+}
+
+/** `streaming_data.expires` is a `Date` from youtubei.js and an ISO string in fixtures. */
+function declaredExpiryMs(expires: unknown): number | null {
+  if (expires instanceof Date) {
+    const t = expires.getTime();
+    return Number.isFinite(t) ? t : null;
+  }
+  if (typeof expires === 'string') {
+    const t = Date.parse(expires);
+    return Number.isFinite(t) ? t : null;
+  }
+  if (typeof expires === 'number' && Number.isFinite(expires)) return expires;
+  return null;
 }
 
 /** youtubei.js caption track → `CaptionTrack`. `null` without a base URL. */

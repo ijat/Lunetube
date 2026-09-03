@@ -7,9 +7,12 @@
  * Phase 1 scope: `getVideo`, `getStreams`, `getRelated`, `getDiagnostics`. The
  * seven Phase-2 methods return a `NOT_IMPLEMENTED` `LuneError`.
  *
- * P1-3 will lift `getStreams`' manifest assembly into a `PlaybackStrategy`
- * (`../playback/`) and add the URL-expiry / 403 recovery loop; the per-item
- * mappers in `map/streams.ts` are already the pieces it needs.
+ * `getStreams` owns **client selection** (walking `CLIENT_LADDER`) and
+ * **recovery** (session refresh on a parser break); turning one `VideoInfo`
+ * into a `StreamManifest` belongs to the injected `PlaybackStrategy`
+ * (`../playback/`). Detecting an *expired* manifest and re-resolving is the
+ * renderer's job (plan P1-5) — `StreamManifest.expiresAt` is the contract for
+ * it, and calling `getStreams` again is the recovery action.
  */
 import type { Innertube } from 'youtubei.js';
 import {
@@ -42,21 +45,44 @@ import {
   type SearchParams,
   type YouTubeSource,
 } from '../contract.js';
-import { attemptableClients, CLIENT_LADDER, type InnerTubeClient } from './clients.js';
+import {
+  CLIENT_LADDER,
+  ladderSkipReason,
+  type ClientCapabilities,
+  type InnerTubeClient,
+} from './clients.js';
 import { ContinuationStore } from './continuations.js';
 import { mapPlayabilityStatus, mapYoutubeError, notImplemented } from './errors.js';
 import { InnertubeSession, youtubeiVersion, type InnertubeSessionOptions } from './session.js';
-import { mapChapters } from './map/chapters.js';
-import { mapAudioTracks, mapCaptionTracks, mapStoryboards, mapVideoTracks } from './map/streams.js';
-import { mapDescription, mapFeedVideos, mapVideoDetail, type RawVideoInfo } from './map/video.js';
+import { mapFeedVideos, mapVideoDetail, type RawVideoInfo } from './map/video.js';
+import { ClassicDashStrategy } from '../playback/classicDash.js';
+import type { PlaybackInfo, PlaybackStrategy } from '../playback/strategy.js';
 
-const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
+/**
+ * What this build can do about clients that need more than a plain request.
+ * Both are `false` in Phase 1 — the ladder's `MWEB` / `WEB` entries are
+ * therefore skipped with an actionable reason rather than attempted and left to
+ * fail with a bare 403. Flipping either one on is the entire wiring cost of a
+ * PO-token provider or of `SabrStrategy`.
+ */
+const CAPABILITIES: ClientCapabilities = { hasPoToken: false, hasSabr: false };
 
 export interface InnertubeYouTubeSourceOptions {
   /** Persistent InnerTube cache directory (resolved by main under `userData`). */
   cacheDir: string;
-  /** URL rewriters for the loopback proxy. `image` / `caption` default to identity. */
+  /**
+   * URL rewriters for the loopback proxy.
+   *
+   * `image` / `caption` default to identity so the adapter is usable before the
+   * proxy exists, but **once the proxy is wired all three must be supplied**:
+   * youtubei.js pushes caption and storyboard URLs through the same
+   * `url_transformer` as media, and an identity caption rewriter leaves
+   * `www.youtube.com` URLs in a manifest the renderer's CSP will refuse to
+   * fetch.
+   */
   rewriters: MediaUrlRewriters;
+  /** Playback strategy. Defaults to `ClassicDashStrategy` (the only Phase-1 impl). */
+  strategy?: PlaybackStrategy;
   /** Test seam — inject a pre-built session (and thus a fake `Innertube`). */
   session?: InnertubeSession;
   /** Test seam forwarded to `InnertubeSession` when `session` is not given. */
@@ -76,7 +102,9 @@ export class InnertubeYouTubeSource implements YouTubeSource {
   readonly #rewriteCaption: (url: URL) => URL;
   readonly #related = new ContinuationStore();
   readonly #ladder = new Map<InnerTubeClient, LadderState>();
+  readonly #strategy: PlaybackStrategy;
   #lastClient: string | null = null;
+  #lastExpiresAt: number | null = null;
 
   constructor(opts: InnertubeYouTubeSourceOptions) {
     this.#session =
@@ -88,6 +116,7 @@ export class InnertubeYouTubeSource implements YouTubeSource {
     this.#rewriteMedia = opts.rewriters.media;
     this.#rewriteImage = opts.rewriters.image ?? identityRewriter;
     this.#rewriteCaption = opts.rewriters.caption ?? identityRewriter;
+    this.#strategy = opts.strategy ?? new ClassicDashStrategy();
   }
 
   async getVideo(params: { videoId: string }): Promise<Result<VideoDetail, LuneError>> {
@@ -113,27 +142,38 @@ export class InnertubeYouTubeSource implements YouTubeSource {
     const videoId = normalizeId(params.videoId);
     if (videoId == null) return err(invalidId());
 
-    const candidates = attemptableClients();
-    if (candidates.length === 0) {
-      return err(
-        makeLuneError('PLAYBACK_FORBIDDEN', 'No usable InnerTube client is available.', {
-          hint: 'Every ladder entry needs a Proof-of-Origin token or the SABR strategy, neither of which exists yet.',
-        }),
-      );
-    }
+    // Walk the whole ladder, not just the attemptable subset, so every entry
+    // ends up with a state — a skipped client must explain itself in the
+    // diagnostics panel instead of silently reading "no error".
+    const skipped: string[] = [];
+    let lastError: LuneError | null = null;
 
-    let lastError: LuneError = makeLuneError('YT_UNAVAILABLE', 'No client produced a stream.');
-    for (const entry of candidates) {
+    for (const entry of CLIENT_LADDER) {
+      const skip = ladderSkipReason(entry, CAPABILITIES);
+      if (skip !== null) {
+        this.#ladder.set(entry.client, { ok: false, formats: 0, lastError: skip });
+        skipped.push(skip);
+        continue;
+      }
+
       const attempt = await this.#guard((yt) =>
         this.#resolveStreams(yt, videoId, entry.client, params.prefs),
       );
       if (attempt.ok) return attempt;
       lastError = attempt.error;
-      // A login/bot block on one client won't be fixed by trying another we
-      // already know needs a PO token — but keep walking for parser breaks.
+      // A login/bot block is an IP-reputation problem, not a client problem:
+      // the next client will hit the same wall. Stop and report it. Parser
+      // breaks and per-client format gaps do keep walking.
       if (attempt.error.code === 'YT_LOGIN_REQUIRED') break;
     }
-    return err(lastError);
+
+    if (lastError !== null) return err(lastError);
+    return err(
+      makeLuneError('PLAYBACK_FORBIDDEN', 'No usable InnerTube client is available.', {
+        detail: 'ladder:none-attemptable',
+        hint: skipped.join(' '),
+      }),
+    );
   }
 
   async #resolveStreams(
@@ -152,55 +192,30 @@ export class InnertubeYouTubeSource implements YouTubeSource {
         return err(playErr);
       }
 
-      const adaptive = info.streaming_data?.adaptive_formats ?? [];
-      const video = mapVideoTracks(adaptive, this.#rewriteMedia);
-      const audio = mapAudioTracks(adaptive, this.#rewriteMedia);
-      if (video.length === 0 && audio.length === 0) {
-        const e = makeLuneError(
-          'YT_UNAVAILABLE',
-          `Client ${client} returned no playable formats.`,
-          {
-            detail: `client:${client}`,
-            hint: 'This usually means the client is SABR-only or needs a PO token from this IP.',
-          },
-        );
-        state.lastError = e.message;
-        return err(e);
-      }
-
-      const manifestXml = await info.toDash({
-        url_transformer: this.#rewriteMedia,
-        manifest_options: { captions_format: 'vtt' },
+      const result = await this.#strategy.resolve(asPlaybackInfo(info), {
+        client,
+        prefs,
+        rewriteMedia: this.#rewriteMedia,
+        rewriteImage: this.#rewriteImage,
+        rewriteCaption: this.#rewriteCaption,
+        mapError: mapYoutubeError,
       });
 
-      const raw = info as unknown as RawVideoInfo;
-      const durationSec = numberOr(info.basic_info.duration, 0);
-      const description = mapDescription(raw);
-      const manifest: StreamManifest = {
-        kind: 'dash',
-        manifestXml,
-        video,
-        audio,
-        captions: mapCaptionTracks(info.captions, this.#rewriteCaption),
-        storyboards: mapStoryboards(
-          info.storyboards as unknown as Parameters<typeof mapStoryboards>[0],
-          this.#rewriteImage,
-        ),
-        chapters: mapChapters({ overlays: raw.player_overlays, description, durationSec }),
-        isLive: info.basic_info.is_live === true,
-        durationSec,
-        expiresAt: streamExpiry(info.streaming_data, video, audio),
-        client,
-      };
+      if (!result.ok) {
+        state.lastError = result.error.message;
+        // A parser break is the one failure a fresh player JS can fix, and
+        // `#guard` is what knows how to do that. Throwing hands it back the
+        // retry it already implements (`mapYoutubeError` passes a `LuneError`
+        // through untouched, so nothing is lost if the retry also fails).
+        if (result.error.code === 'YT_PARSE_CHANGED') throw result.error;
+        return result;
+      }
 
       state.ok = true;
-      state.formats = video.length + audio.length;
+      state.formats = result.value.video.length + result.value.audio.length;
       this.#lastClient = client;
-      // `prefs` (maxHeight / audioOnly / preferredAudioLanguage) is applied by
-      // the renderer's track selection in Phase 1; P1-3 pushes it down into a
-      // `format_filter` on `toDash()` and the DTO track lists.
-      void prefs;
-      return ok(manifest);
+      this.#lastExpiresAt = result.value.expiresAt;
+      return result;
     } catch (e) {
       const mapped = mapYoutubeError(e);
       state.lastError = mapped.message;
@@ -241,6 +256,13 @@ export class InnertubeYouTubeSource implements YouTubeSource {
     return { items, continuation: this.#related.put(info) };
   }
 
+  /**
+   * The PRD §8 diagnostics panel's data source: which client succeeded, how
+   * many formats it produced, when those URLs expire, the last error (or the
+   * skip reason) for every ladder entry, and the youtubei.js version — the four
+   * things you need to tell "YouTube changed something" apart from "this
+   * machine's IP is blocked".
+   */
   async getDiagnostics(): Promise<Result<AdapterDiagnostics, LuneError>> {
     const ladder = CLIENT_LADDER.map((entry) => {
       const state = this.#ladder.get(entry.client);
@@ -248,12 +270,16 @@ export class InnertubeYouTubeSource implements YouTubeSource {
         client: entry.client,
         ok: state?.ok ?? false,
         formats: state?.formats ?? 0,
-        lastError: state?.lastError ?? null,
+        // Before the first call there is no state, so fall back to the static
+        // reason this entry would be skipped for — non-null for every entry the
+        // build cannot use, which is exactly what the panel needs to show.
+        lastError: state?.lastError ?? ladderSkipReason(entry, CAPABILITIES),
       };
     });
     return ok({
       youtubeiVersion: youtubeiVersion(),
       lastClient: this.#lastClient,
+      lastExpiresAt: this.#lastExpiresAt,
       ladder,
     });
   }
@@ -321,30 +347,17 @@ function parseChanged(detail: string): LuneError {
   return makeLuneError('YT_PARSE_CHANGED', 'YouTube returned an unexpected shape.', { detail });
 }
 
-function numberOr(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function streamExpiry(
-  streamingData: { expires?: unknown } | undefined,
-  video: { url: string }[],
-  audio: { url: string }[],
-): number {
-  const expires = streamingData?.expires;
-  if (expires instanceof Date && Number.isFinite(expires.getTime())) return expires.getTime();
-  if (typeof expires === 'string') {
-    const t = Date.parse(expires);
-    if (Number.isFinite(t)) return t;
-  }
-  const sample = video[0]?.url ?? audio[0]?.url;
-  if (sample != null) {
-    try {
-      const expire = new URL(sample).searchParams.get('expire');
-      const seconds = expire == null ? NaN : Number(expire);
-      if (Number.isFinite(seconds) && seconds > 0) return Math.trunc(seconds * 1000);
-    } catch {
-      // ignore
-    }
-  }
-  return Date.now() + FIVE_HOURS_MS;
+/**
+ * The one cast at the playback seam.
+ *
+ * `packages/youtube/src/playback/**` may not import youtubei.js (ESLint), so
+ * `PlaybackInfo` is a structural view built from the mappers' `unknown`-typed
+ * raw shapes. youtubei.js' concrete `VideoInfo` matches it at runtime but is
+ * not assignable to it under `exactOptionalPropertyTypes` (its class-typed
+ * `storyboards` / `captions` are narrower than the loose fixture-friendly
+ * shapes the mappers accept). Confining the cast here keeps it visible and
+ * keeps every other file honest.
+ */
+function asPlaybackInfo(info: unknown): PlaybackInfo {
+  return info as PlaybackInfo;
 }

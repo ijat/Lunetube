@@ -16,5 +16,8 @@
   "dependencies": {
     "@lunetube/shared": "workspace:*",
     "youtubei.js": "^18.0.0"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
   }
 }

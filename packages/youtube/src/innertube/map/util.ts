@@ -93,21 +93,27 @@ export function rewriteUrl(value: unknown, rewriter: (url: URL) => URL): string 
 }
 
 /**
- * googlevideo URLs carry an `expire` query param (unix seconds). Returns epoch
- * ms, or `fallbackMs` from now when absent/unparseable.
+ * googlevideo URLs carry an `expire` query param (unix **seconds**) — the exact
+ * instant the URL starts returning 403. Returns epoch ms, or `null` when the
+ * URL is absent, unparseable, or carries no usable `expire`.
+ *
+ * Callers must pass the **raw upstream URL**, not a proxy-rewritten one: the
+ * proxy buries the whole target inside a base64url `?u=` parameter, so
+ * `expire` is not visible at the top level of a rewritten URL.
+ * `resolveExpiresAt` (`./streams.ts`) is the composed form and owns the
+ * `now + 5h` fallback.
  */
-export function expiresAtFromUrl(rawUrl: unknown, fallbackMs: number): number {
+export function expireParamMs(rawUrl: unknown): number | null {
   const normalized = normalizeUrl(rawUrl);
-  if (normalized != null) {
-    try {
-      const expire = new URL(normalized).searchParams.get('expire');
-      const seconds = expire == null ? null : Number(expire);
-      if (seconds != null && Number.isFinite(seconds) && seconds > 0) {
-        return Math.trunc(seconds * 1000);
-      }
-    } catch {
-      // fall through
+  if (normalized == null) return null;
+  try {
+    const expire = new URL(normalized).searchParams.get('expire');
+    const seconds = expire == null ? null : Number(expire);
+    if (seconds != null && Number.isFinite(seconds) && seconds > 0) {
+      return Math.trunc(seconds * 1000);
     }
+  } catch {
+    // not a URL — no expiry signal
   }
-  return Date.now() + fallbackMs;
+  return null;
 }
