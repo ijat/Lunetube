@@ -4,6 +4,7 @@
     { "path": "./tsconfig.tools.json" },
     { "path": "./packages/shared" },
     { "path": "./packages/design" },
+    { "path": "./packages/youtube" },
     { "path": "./apps/desktop" },
     { "path": "./tests" }
   ]

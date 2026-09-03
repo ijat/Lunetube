@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "videoId": "noDesc00001",
+    "client": "IOS",
+    "recordedAt": "2026-09-03T00:00:00.000Z",
+    "note": "Hand-authored (plan P1-1). No description, no chapters, no heat map — degradation case for the video/chapter mappers."
+  },
+  "playability_status": { "status": "OK", "reason": "" },
+  "basic_info": {
+    "id": "noDesc00001",
+    "title": "clip",
+    "channel_id": "UCnodesc0000000000000",
+    "channel": {
+      "id": "UCnodesc0000000000000",
+      "name": "raw uploads",
+      "url": "https://www.youtube.com/channel/UCnodesc0000000000000"
+    },
+    "short_description": "",
+    "duration": 47,
+    "view_count": 8,
+    "like_count": null,
+    "is_live": false,
+    "is_upcoming": false,
+    "category": null,
+    "keywords": [],
+    "thumbnail": []
+  },
+  "streaming_data": {
+    "expires": "2026-09-03T06:30:00.000Z",
+    "adaptive_formats": [
+      {
+        "itag": 137,
+        "url": "https://rr1---sn-x.googlevideo.com/videoplayback?expire=1788470000&itag=137",
+        "mime_type": "video/mp4; codecs=\"avc1.640020\"",
+        "bitrate": 2400000,
+        "width": 1920,
+        "height": 1080,
+        "fps": 30,
+        "has_video": true,
+        "has_audio": false
+      },
+      {
+        "itag": 140,
+        "url": "https://rr1---sn-x.googlevideo.com/videoplayback?expire=1788470000&itag=140",
+        "mime_type": "audio/mp4; codecs=\"mp4a.40.2\"",
+        "bitrate": 128000,
+        "has_video": false,
+        "has_audio": true,
+        "audio_sample_rate": 44100,
+        "audio_channels": 2,
+        "is_original": true
+      }
+    ]
+  },
+  "wn_has_continuation": false,
+  "watch_next_feed": []
+}
