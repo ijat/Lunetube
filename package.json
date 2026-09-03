@@ -1,0 +1,38 @@
+{
+  "name": "lunetube",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.6.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @lunetube/desktop dev",
+    "build": "pnpm --filter \"./packages/*\" build && pnpm --filter @lunetube/desktop build",
+    "typecheck": "tsc -b",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "fixtures:record": "pnpm --filter @lunetube/youtube fixtures:record"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.10.5",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^44.1.1",
+    "electron-vite": "^5.0.0",
+    "@swc/core": "^1.13.5",
+    "eslint": "^10.9.1",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.69.0",
+    "vite": "~7.3.6",
+    "vitest": "^4.1.11",
+    "jsdom": "^26.1.0",
+    "@playwright/test": "^1.62.1"
+  }
+}

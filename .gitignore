@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+out/
+*.tsbuildinfo
+
+# test / coverage artifacts
+coverage/
+playwright-report/
+test-results/
+
+# orchestration worktrees / tooling
+.claude/
+
+# editor / OS
+.DS_Store
+*.log
+
+# local env
+.env
+.env.*
+!.env.example
