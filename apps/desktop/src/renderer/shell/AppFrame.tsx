@@ -13,7 +13,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const onWatch = useLocation().pathname.startsWith('/watch');
 
   return (
-    <div className="stage" data-dir="b">
+    <div className="stage" data-dir="b" data-screen={onWatch ? 'watch' : 'browse'}>
       <Backdrop />
       <Grain />
       <TopBar />

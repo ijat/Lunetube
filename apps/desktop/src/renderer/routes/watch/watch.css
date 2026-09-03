@@ -1,0 +1,265 @@
+/* LuneTube watch page — Direction B "Cinema" (docs/mockups.html
+ * `.stage[data-dir="b"]` WATCH screen: `.player` / `.meta` / `.desc` / `.comm`).
+ *
+ * F5 conflict 1 is resolved for the LOCKED PRD §7 typography rule: the mockup
+ * reaches for `var(--font-mono)` on `.desc a`, `.ts` and `.comm h3 .c`; here
+ * those are the body font (Hanken Grotesk) + `font-variant-numeric: tabular-nums`.
+ * There is no monospace family anywhere in this file — `watch.spec.ts` asserts
+ * that no element in the route computes to one.
+ */
+
+/* ---- full-bleed: cancel .stage__content's top + side padding for the player,
+ *      the meta block re-adds its own (`26px 30px 0`, mockup L378). ---- */
+.watch {
+  margin: calc(var(--space-7) * -1) calc(var(--space-8) * -1) 0;
+}
+
+.watch__player {
+  position: relative;
+}
+
+/* ---- poster / click-to-play (mockup `.player .frame`) ---- */
+.watch__poster {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-bottom: 1px solid var(--stroke);
+  padding: 0;
+  cursor: pointer;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / 0.08), transparent 55%),
+    linear-gradient(160deg, #12213b 0%, #0b1220 45%, #0a0f18 100%);
+  overflow: hidden;
+}
+.watch__poster[disabled] {
+  cursor: default;
+}
+.watch__poster-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+}
+.watch__poster-play {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: var(--fg-1);
+  background: rgb(8 10 15 / 0.62);
+  border: 1px solid var(--stroke-strong);
+  box-shadow: 0 0 30px var(--glow);
+  transition: transform 0.15s var(--ease);
+}
+.watch__poster:hover:not([disabled]) .watch__poster-play {
+  transform: scale(1.06);
+}
+
+/* ---- meta block (mockup `.meta`) ---- */
+.watch__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 26px 30px 0;
+}
+
+.watch__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-size: 1.9rem;
+  line-height: 1.22;
+  text-wrap: balance;
+  max-width: 30ch;
+  color: var(--fg-1);
+}
+
+.watch__subrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.watch__chan {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.watch__av {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex: none;
+  object-fit: cover;
+}
+.watch__av--fallback {
+  background: conic-gradient(from 210deg, #6ba6f5, #5fd08a, var(--accent), #6ba6f5);
+}
+.watch__chan-name {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.watch__chan-sub {
+  color: var(--fg-3);
+  font-size: 11.5px;
+}
+
+/* ---- actions (mockup `.actions`) ---- */
+.watch__actions {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.watch__grp {
+  display: flex;
+  background: var(--surface-1);
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.watch__grp-btn,
+.watch__act-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg-1);
+  background: transparent;
+  border: 0;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+.watch__grp-btn + .watch__grp-btn {
+  border-left: 1px solid var(--stroke);
+}
+.watch__act-btn {
+  background: var(--surface-1);
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+}
+.watch__grp-btn:hover:not(:disabled),
+.watch__act-btn:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.watch__grp-btn:disabled,
+.watch__act-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.watch__count {
+  color: var(--fg-2);
+}
+
+/* ---- description (mockup `.desc`) ---- */
+.watch__desc {
+  background: var(--surface-1);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-size: 12.5px;
+  color: var(--fg-2);
+  line-height: 1.62;
+}
+.watch__desc-stat {
+  margin-bottom: 6px;
+}
+.watch__stat {
+  color: var(--fg-1);
+  font-weight: 600;
+}
+.watch__desc-body {
+  white-space: pre-wrap;
+}
+.watch__desc-body[data-expanded='false'] {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.watch__ts,
+.watch__link {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.watch__ts:hover,
+.watch__link:hover {
+  text-decoration: underline;
+}
+.watch__link {
+  word-break: break-all;
+}
+.watch__desc-more {
+  display: inline-block;
+  margin-top: 8px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--fg-1);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.watch__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+.watch__chip {
+  font-size: 11px;
+  color: var(--fg-2);
+  background: rgb(255 255 255 / 0.05);
+  border: 1px solid var(--stroke-soft);
+  border-radius: 20px;
+  padding: 4px 11px;
+}
+
+/* ---- Phase-2 placeholders (mockup `.comm`; no rail in direction B) ---- */
+.watch__phase2 {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 6px 30px 0;
+}
+.watch__ph {
+  border: 1px dashed var(--stroke);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+.watch__ph-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-size: 1rem;
+  color: var(--fg-1);
+}
+.watch__ph-note {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--fg-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .watch__poster-play {
+    transition: none;
+  }
+}
