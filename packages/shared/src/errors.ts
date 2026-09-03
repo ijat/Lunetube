@@ -13,6 +13,7 @@ export type LuneErrorCode =
   | 'PLAYBACK_EXPIRED'
   | 'DB_ERROR'
   | 'INVALID_INPUT'
+  | 'NOT_IMPLEMENTED'
   | 'INTERNAL';
 
 export interface LuneError {
@@ -36,6 +37,7 @@ const DEFAULT_RETRYABLE: Record<LuneErrorCode, boolean> = {
   PLAYBACK_EXPIRED: true,
   DB_ERROR: false,
   INVALID_INPUT: false,
+  NOT_IMPLEMENTED: false,
   INTERNAL: false,
 };
 

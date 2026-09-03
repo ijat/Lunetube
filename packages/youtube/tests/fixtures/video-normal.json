@@ -1,0 +1,254 @@
+{
+  "meta": {
+    "videoId": "LXb3EKWsInQ",
+    "client": "IOS",
+    "recordedAt": "2026-09-03T00:00:00.000Z",
+    "note": "Hand-authored from youtubei.js VideoInfo types (plan P1-1). Not a real capture; URLs are synthetic and redacted."
+  },
+  "playability_status": { "status": "OK", "reason": "" },
+  "basic_info": {
+    "id": "LXb3EKWsInQ",
+    "title": "Costa Rica in 4K 60fps HDR (ULTRA HD)",
+    "channel_id": "UCabc1234567890Channel",
+    "channel": {
+      "id": "UCabc1234567890Channel",
+      "name": "Jacob + Katie Schwarz",
+      "url": "https://www.youtube.com/channel/UCabc1234567890Channel"
+    },
+    "author": "Jacob + Katie Schwarz",
+    "short_description": "Shot on a Sony a7S II.\n\nChapters:\n0:00 Intro\n1:30 Rainforest\n4:45 Beaches\n8:10 Wildlife\n\nMusic licensed via Musicbed.",
+    "duration": 621,
+    "view_count": 44100000,
+    "like_count": 512000,
+    "is_live": false,
+    "is_upcoming": false,
+    "category": "Travel & Events",
+    "keywords": ["4k", "costa rica", "nature", "hdr"],
+    "thumbnail": [
+      {
+        "url": "https://i.ytimg.com/vi/LXb3EKWsInQ/maxresdefault.jpg",
+        "width": 1280,
+        "height": 720
+      },
+      { "url": "https://i.ytimg.com/vi/LXb3EKWsInQ/hqdefault.jpg", "width": 480, "height": 360 }
+    ]
+  },
+  "primary_info": {
+    "published": "May 1, 2016",
+    "relative_date": "10 years ago"
+  },
+  "secondary_info": {
+    "description": "Shot on a Sony a7S II.\n\nChapters:\n0:00 Intro\n1:30 Rainforest\n4:45 Beaches\n8:10 Wildlife\n\nMusic licensed via Musicbed. See more at 3:15 for the drone segment.",
+    "owner": {
+      "subscriber_count": "1.2M subscribers",
+      "author": {
+        "id": "UCabc1234567890Channel",
+        "name": "Jacob + Katie Schwarz",
+        "thumbnails": [
+          { "url": "https://yt3.ggpht.com/ytc/avatar_s88.jpg", "width": 88, "height": 88 },
+          { "url": "https://yt3.ggpht.com/ytc/avatar_s176.jpg", "width": 176, "height": 176 }
+        ]
+      }
+    }
+  },
+  "player_overlays": {
+    "decorated_player_bar": {
+      "player_bar": {
+        "markers_map": [
+          {
+            "marker_key": "DESCRIPTION_CHAPTERS",
+            "value": {
+              "chapters": [
+                {
+                  "title": "Introduction",
+                  "time_range_start_millis": 0,
+                  "thumbnail": [
+                    {
+                      "url": "https://i.ytimg.com/vi/LXb3EKWsInQ/hq1.jpg",
+                      "width": 168,
+                      "height": 94
+                    }
+                  ]
+                },
+                { "title": "Rainforest", "time_range_start_millis": 90000, "thumbnail": [] },
+                { "title": "Beaches", "time_range_start_millis": 285000, "thumbnail": [] },
+                { "title": "Wildlife", "time_range_start_millis": 490000, "thumbnail": [] }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "heat_map": {
+    "heat_markers": [
+      {
+        "time_range_start_millis": 0,
+        "marker_duration_millis": 6210,
+        "heat_marker_intensity_score_normalized": 1
+      },
+      {
+        "time_range_start_millis": 62100,
+        "marker_duration_millis": 6210,
+        "heat_marker_intensity_score_normalized": 0.42
+      },
+      {
+        "time_range_start_millis": 310500,
+        "marker_duration_millis": 6210,
+        "heat_marker_intensity_score_normalized": 0.77
+      }
+    ]
+  },
+  "streaming_data": {
+    "expires": "2026-09-03T05:00:00.000Z",
+    "adaptive_formats": [
+      {
+        "itag": 402,
+        "url": "https://rr3---sn-4g5e6nez.googlevideo.com/videoplayback?expire=1788462000&itag=402&mime=video%2Fmp4&id=abc",
+        "mime_type": "video/mp4; codecs=\"av01.0.12M.08\"",
+        "bitrate": 21000000,
+        "width": 3840,
+        "height": 2160,
+        "fps": 60,
+        "has_video": true,
+        "has_audio": false
+      },
+      {
+        "itag": 299,
+        "url": "https://rr3---sn-4g5e6nez.googlevideo.com/videoplayback?expire=1788462000&itag=299&mime=video%2Fmp4&id=abc",
+        "mime_type": "video/mp4; codecs=\"avc1.64002a\"",
+        "bitrate": 6800000,
+        "width": 1920,
+        "height": 1080,
+        "fps": 60,
+        "has_video": true,
+        "has_audio": false
+      },
+      {
+        "itag": 134,
+        "url": "https://rr3---sn-4g5e6nez.googlevideo.com/videoplayback?expire=1788462000&itag=134&mime=video%2Fmp4&id=abc",
+        "mime_type": "video/mp4; codecs=\"avc1.4d401e\"",
+        "bitrate": 620000,
+        "width": 640,
+        "height": 360,
+        "fps": 30,
+        "has_video": true,
+        "has_audio": false
+      },
+      {
+        "itag": 140,
+        "url": "https://rr3---sn-4g5e6nez.googlevideo.com/videoplayback?expire=1788462000&itag=140&mime=audio%2Fmp4&id=abc",
+        "mime_type": "audio/mp4; codecs=\"mp4a.40.2\"",
+        "bitrate": 129000,
+        "has_video": false,
+        "has_audio": true,
+        "audio_sample_rate": 44100,
+        "audio_channels": 2,
+        "language": null,
+        "is_original": true,
+        "audio_track": {
+          "audio_is_default": true,
+          "display_name": "English (original)",
+          "id": "en.4"
+        }
+      },
+      {
+        "itag": 251,
+        "url": "https://rr3---sn-4g5e6nez.googlevideo.com/videoplayback?expire=1788462000&itag=251&mime=audio%2Fwebm&id=abc",
+        "mime_type": "audio/webm; codecs=\"opus\"",
+        "bitrate": 145000,
+        "has_video": false,
+        "has_audio": true,
+        "audio_sample_rate": 48000,
+        "audio_channels": 2,
+        "language": "es",
+        "is_original": false,
+        "audio_track": { "audio_is_default": false, "display_name": "Spanish", "id": "es.3" }
+      }
+    ]
+  },
+  "captions": {
+    "caption_tracks": [
+      {
+        "base_url": "https://www.youtube.com/api/timedtext?v=LXb3EKWsInQ&lang=en",
+        "name": "English",
+        "language_code": "en",
+        "kind": null
+      },
+      {
+        "base_url": "https://www.youtube.com/api/timedtext?v=LXb3EKWsInQ&lang=en&kind=asr",
+        "name": "English (auto-generated)",
+        "language_code": "en",
+        "kind": "asr"
+      }
+    ]
+  },
+  "storyboards": {
+    "boards": [
+      {
+        "template_url": "https://i.ytimg.com/sb/LXb3EKWsInQ/storyboard3_L0/$N.jpg?sqp=x",
+        "thumbnail_width": 48,
+        "thumbnail_height": 27,
+        "thumbnail_count": 100,
+        "interval": 6210,
+        "columns": 10,
+        "rows": 10,
+        "storyboard_count": 1
+      },
+      {
+        "template_url": "https://i.ytimg.com/sb/LXb3EKWsInQ/storyboard3_L1/$M.jpg?sqp=x",
+        "thumbnail_width": 80,
+        "thumbnail_height": 45,
+        "thumbnail_count": 100,
+        "interval": 6210,
+        "columns": 5,
+        "rows": 5,
+        "storyboard_count": 4
+      },
+      {
+        "template_url": "https://i.ytimg.com/sb/LXb3EKWsInQ/storyboard3_L2/$M.jpg?sqp=x",
+        "thumbnail_width": 160,
+        "thumbnail_height": 90,
+        "thumbnail_count": 100,
+        "interval": 2000,
+        "columns": 3,
+        "rows": 3,
+        "storyboard_count": 12
+      }
+    ]
+  },
+  "wn_has_continuation": true,
+  "watch_next_feed": [
+    {
+      "video_id": "aqz-KE-bpKQ",
+      "title": "Big Buck Bunny 60fps 4K - Official Blender Foundation Short Film",
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg", "width": 480, "height": 360 }
+      ],
+      "author": {
+        "id": "UCblenderfoundation00",
+        "name": "Blender",
+        "thumbnails": [
+          { "url": "https://yt3.ggpht.com/blender_s88.jpg", "width": 88, "height": 88 }
+        ]
+      },
+      "short_view_count": "8.4M views",
+      "published": "9 years ago",
+      "length_text": "10:34",
+      "is_live": false
+    },
+    {
+      "video_id": "Cs3q7B4uS0M",
+      "title": "Peaceful Forest Ambience",
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/Cs3q7B4uS0M/hqdefault.jpg", "width": 480, "height": 360 }
+      ],
+      "author": { "id": "UCambientchannel00000", "name": "Ambient World" },
+      "short_view_count": "1.1M views",
+      "published": "2 years ago",
+      "length_text": "3:00:00",
+      "is_live": false
+    }
+  ],
+  "dash_manifest_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<MPD xmlns=\"urn:mpeg:dash:schema:mpd:2011\" type=\"static\" mediaPresentationDuration=\"PT621S\" minBufferTime=\"PT1.5S\" profiles=\"urn:mpeg:dash:profile:isoff-main:2011\">\n  <Period>\n    <AdaptationSet contentType=\"video\" mimeType=\"video/mp4\">\n      <Representation id=\"402\" codecs=\"av01.0.12M.08\" bandwidth=\"21000000\" width=\"3840\" height=\"2160\" frameRate=\"60\">\n        <BaseURL>https://rr3---sn-4g5e6nez.googlevideo.com/videoplayback?expire=1788462000&amp;itag=402</BaseURL>\n      </Representation>\n    </AdaptationSet>\n    <AdaptationSet contentType=\"audio\" mimeType=\"audio/mp4\">\n      <Representation id=\"140\" codecs=\"mp4a.40.2\" bandwidth=\"129000\" audioSamplingRate=\"44100\">\n        <BaseURL>https://rr3---sn-4g5e6nez.googlevideo.com/videoplayback?expire=1788462000&amp;itag=140</BaseURL>\n      </Representation>\n    </AdaptationSet>\n  </Period>\n</MPD>"
+}

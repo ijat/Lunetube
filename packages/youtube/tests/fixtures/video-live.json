@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "videoId": "liveStream1",
+    "client": "IOS",
+    "recordedAt": "2026-09-03T00:00:00.000Z",
+    "note": "Hand-authored (plan P1-1). Live broadcast — is_live true, no fixed duration, no chapters."
+  },
+  "playability_status": { "status": "OK", "reason": "" },
+  "basic_info": {
+    "id": "liveStream1",
+    "title": "24/7 Lofi Radio — beats to relax/study to",
+    "channel_id": "UClofigirl0000000000000",
+    "channel": {
+      "id": "UClofigirl0000000000000",
+      "name": "Lofi Radio",
+      "url": "https://www.youtube.com/channel/UClofigirl0000000000000"
+    },
+    "author": "Lofi Radio",
+    "short_description": "Live now. Requests in chat.",
+    "duration": 0,
+    "view_count": 21000,
+    "like_count": 180000,
+    "is_live": true,
+    "is_upcoming": false,
+    "category": "Music",
+    "keywords": ["lofi", "live", "radio"],
+    "thumbnail": [
+      {
+        "url": "https://i.ytimg.com/vi/liveStream1/hqdefault_live.jpg",
+        "width": 480,
+        "height": 360
+      }
+    ]
+  },
+  "primary_info": { "published": "Streamed live", "relative_date": "started 3 hours ago" },
+  "secondary_info": {
+    "description": "Live now. Requests in chat.",
+    "owner": {
+      "subscriber_count": "3.4M subscribers",
+      "author": {
+        "id": "UClofigirl0000000000000",
+        "name": "Lofi Radio",
+        "thumbnails": [{ "url": "https://yt3.ggpht.com/lofi_s88.jpg", "width": 88, "height": 88 }]
+      }
+    }
+  },
+  "streaming_data": {
+    "adaptive_formats": [
+      {
+        "itag": 299,
+        "url": "https://rr5---sn-live.googlevideo.com/videoplayback?expire=1788480000&itag=299&live=1",
+        "mime_type": "video/mp4; codecs=\"avc1.64002a\"",
+        "bitrate": 4500000,
+        "width": 1920,
+        "height": 1080,
+        "fps": 30,
+        "has_video": true,
+        "has_audio": false
+      },
+      {
+        "itag": 140,
+        "url": "https://rr5---sn-live.googlevideo.com/videoplayback?expire=1788480000&itag=140&live=1",
+        "mime_type": "audio/mp4; codecs=\"mp4a.40.2\"",
+        "bitrate": 130000,
+        "has_video": false,
+        "has_audio": true,
+        "audio_sample_rate": 44100,
+        "audio_channels": 2,
+        "is_original": true
+      }
+    ]
+  },
+  "wn_has_continuation": false,
+  "watch_next_feed": []
+}

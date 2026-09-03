@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "videoId": "noStream001",
+    "client": "IOS",
+    "recordedAt": "2026-09-03T00:00:00.000Z",
+    "note": "Hand-authored (plan P1-1). Playable metadata but streaming_data is absent — degradation case for getStreams."
+  },
+  "playability_status": { "status": "OK", "reason": "" },
+  "basic_info": {
+    "id": "noStream001",
+    "title": "Members-only Q&A (audio issues)",
+    "channel_id": "UCnostream000000000000",
+    "channel": {
+      "id": "UCnostream000000000000",
+      "name": "Studio Notes",
+      "url": "https://www.youtube.com/channel/UCnostream000000000000"
+    },
+    "author": "Studio Notes",
+    "short_description": "This one had upload problems.",
+    "duration": 300,
+    "view_count": 1234,
+    "like_count": 40,
+    "is_live": false,
+    "is_upcoming": false,
+    "category": "Education",
+    "keywords": [],
+    "thumbnail": [
+      { "url": "https://i.ytimg.com/vi/noStream001/hqdefault.jpg", "width": 480, "height": 360 }
+    ]
+  },
+  "primary_info": { "published": "Aug 20, 2026", "relative_date": "2 weeks ago" },
+  "secondary_info": {
+    "description": "This one had upload problems.",
+    "owner": {
+      "subscriber_count": "12K subscribers",
+      "author": {
+        "id": "UCnostream000000000000",
+        "name": "Studio Notes",
+        "thumbnails": [
+          { "url": "https://yt3.ggpht.com/studionotes_s88.jpg", "width": 88, "height": 88 }
+        ]
+      }
+    }
+  },
+  "wn_has_continuation": false,
+  "watch_next_feed": []
+}
