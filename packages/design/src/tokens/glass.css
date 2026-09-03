@@ -1,0 +1,35 @@
+/*
+ * Glass / acrylic — PRD §7 blur budget: at most two stacked blur layers (root
+ * backdrop + one panel layer); nested cards use flat alpha, never more blur.
+ *
+ * --glass-material-opacity defaults to 0.7 (PRD §7 + decision A4). Each theme
+ * additionally exposes --glass-opacity-option (0.85, or 0.98 for dark-modern)
+ * which the PRD §9 "glass level" setting can promote into this variable.
+ */
+:root {
+  --glass-material-opacity: 0.7;
+  --blur-root: 30px;
+  --blur-panel: 18px;
+  --glass-hairline: 1px solid var(--stroke);
+  --glass-inner-highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+.glass-root {
+  background: rgb(10 13 19 / var(--glass-material-opacity));
+  backdrop-filter: blur(var(--blur-root)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--blur-root)) saturate(150%);
+}
+
+.glass-panel {
+  background: var(--glass-2);
+  border: var(--glass-hairline);
+  box-shadow: var(--glass-inner-highlight);
+  backdrop-filter: blur(var(--blur-panel)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--blur-panel)) saturate(140%);
+}
+
+/* Nested surface — no additional blur (blur budget). */
+.glass-flat {
+  background: var(--glass-1);
+  border: var(--glass-hairline);
+}

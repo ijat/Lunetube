@@ -1,0 +1,32 @@
+/* Layout tokens — radii from Lunegit (control 6) + mockup (card 16); the shared
+ * mockup easing curve; the merged-top-bar / dock heights (decision A2). */
+:root {
+  --radius-control: 6px;
+  --radius-sm: 9px;
+  --radius-panel: 14px;
+  --radius-card: 16px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --topbar-h: 44px;
+  --dock-h: 68px;
+
+  --z-backdrop: 0;
+  --z-grain: 1;
+  --z-content: 2;
+  --z-topbar: 20;
+  --z-dock: 30;
+  --z-menu: 60;
+  --z-tooltip: 80;
+}
