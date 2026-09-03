@@ -121,6 +121,35 @@ Playback strategy is behind a `PlaybackStrategy` seam: `ClassicDashStrategy`
 (IOS client → `toDash()` → shaka) is the only Phase 1 implementation; `SabrStrategy`
 is a named, empty slot.
 
+### Player core (P1-5) — `apps/desktop/src/renderer/player/`
+
+`PlaybackEngine` wraps `shaka.Player@5.2.8`. It imports **no** shaka: it talks to
+a narrow structural interface (`ShakaPlayerLike`) and takes an injected
+`createPlayer()`. `shakaPlayer.ts` is the only module that imports shaka, and by
+declaring `createShakaPlayer(): ShakaPlayerLike` it makes `tsc` prove the real
+player still satisfies every method the engine calls; `assertShakaConstants()`
+does the same at runtime for the numeric error-code enums.
+
+**Stream recovery is the load-bearing behaviour.** googlevideo URLs expire and 403. On `BAD_HTTP_STATUS` 403/410, `HTTP_ERROR`, or a segment request issued past
+`StreamManifest.expiresAt`, the engine captures `currentTime` + play state,
+re-resolves `yt:streams` through the query layer, reloads, and restores. Four
+invariants hold it together: the `<video>` element is authoritative for time;
+track choices are stored as _preferences_, never as shaka `Track` objects (shaka
+invalidates those on unload); a debounce timer collapses a burst of segment
+failures into exactly one re-resolve; and a `#generation` epoch means a
+superseded recovery is a no-op rather than a clobber. Two consecutive failed
+attempts latch a `degraded` flag on `usePlayerStore` and **stop** the loop —
+unbounded retries against a hard 403 are how you get the user's IP blocked.
+
+`usePlayerStore` (Zustand) mirrors the element on a rAF tick, `set`ing only
+fields that actually changed. Controls read it through selectors and call the
+engine; nothing writes playback state into the store except the tick.
+
+> **CSP.** `connect-src` in `PROD_CSP` grants `blob:`. The DASH manifest is
+> handed to shaka as an object URL, and shaka _fetches_ it — which CSP scores
+> against `connect-src`, where `'self'` deliberately does not cover `blob:`.
+> Without the grant the player cannot load anything in a packaged build.
+
 ## Design system
 
 `packages/design`: `tokens/base.css` (Lunegit white-alpha baseline) →
