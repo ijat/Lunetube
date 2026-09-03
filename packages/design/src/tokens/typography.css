@@ -1,0 +1,46 @@
+/*
+ * Typography — the LOCKED PRD §7 rule, not the mockup's. Hanken Grotesk for
+ * body / UI / numerals; Bricolage Grotesque for large display only. There is no
+ * fixed-pitch family declared here or anywhere else in the token layer (PRD §7):
+ * every numeral run gets `.tnum` (font-variant-numeric: tabular-nums) instead.
+ *
+ * Fluid scale anchored on Lunegit's 9 / 11 / 13 / 14 / 18 / 22 (plan F4),
+ * extended upward for the Cinema display sizes.
+ */
+:root {
+  --font-body: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --font-display: 'Bricolage Grotesque', var(--font-body);
+
+  --text-2xs: clamp(0.5625rem, 0.548rem + 0.07vw, 0.625rem);
+  --text-xs: clamp(0.6875rem, 0.66rem + 0.12vw, 0.75rem);
+  --text-sm: clamp(0.8125rem, 0.792rem + 0.1vw, 0.875rem);
+  --text-base: 0.875rem;
+  --text-md: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1.04rem + 0.42vw, 1.375rem);
+  --text-xl: clamp(1.375rem, 1.15rem + 1.1vw, 1.9rem);
+  --text-2xl: clamp(1.6rem, 1.28rem + 1.6vw, 2.1rem);
+
+  --leading-tight: 1.16;
+  --leading-snug: 1.28;
+  --leading-normal: 1.5;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --tracking-display: -0.02em;
+  --tracking-tight: -0.01em;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-snug);
+  text-wrap: balance;
+}

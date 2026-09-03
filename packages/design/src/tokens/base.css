@@ -1,0 +1,50 @@
+/*
+ * Baseline tokens — the Lunegit DarkTheme.axaml white-alpha ramp (plan F4) as
+ * CSS custom properties, plus short app-vocabulary aliases over whichever theme
+ * block from themes/generated/themes.css is active. Every alias has a literal
+ * fallback so the shell still renders if a theme omits a key.
+ *
+ * A `[data-theme]` value is always present on <html> (defaults to "blue").
+ */
+:root {
+  color-scheme: dark;
+
+  --void: #0a0d13;
+  --void-2: #0c1017;
+  --backdrop-strong: var(--backdrop-dark, rgb(10 13 19 / 0.94));
+
+  --fg-1: var(--foreground-primary, rgb(255 255 255 / 0.8));
+  --fg-2: var(--foreground-secondary, rgb(255 255 255 / 0.667));
+  --fg-3: var(--foreground-tertiary, rgb(255 255 255 / 0.533));
+  --fg-4: var(--foreground-quaternary, rgb(255 255 255 / 0.4));
+  --fg-dim: var(--foreground-dim, rgb(255 255 255 / 0.333));
+  --fg-faint: var(--foreground-faint, rgb(255 255 255 / 0.267));
+  --fg-bright: var(--foreground-bright, rgb(255 255 255 / 0.87));
+
+  --surface-1: var(--surface-input, rgb(255 255 255 / 0.04));
+  --surface-2: var(--surface-hover, rgb(255 255 255 / 0.063));
+  --surface-3: var(--surface-overlay, rgb(255 255 255 / 0.086));
+  --surface-selected-2: var(--surface-selected, rgb(255 255 255 / 0.094));
+  --surface-active-2: var(--surface-active, rgb(255 255 255 / 0.125));
+
+  --stroke: var(--surface-border, rgb(255 255 255 / 0.12));
+  --stroke-soft: var(--surface-dark-overlay, rgb(255 255 255 / 0.07));
+  --stroke-strong: var(--surface-separator, rgb(255 255 255 / 0.22));
+
+  --glass-1: rgb(255 255 255 / 0.045);
+  --glass-2: rgb(255 255 255 / 0.075);
+  --glass-3: rgb(255 255 255 / 0.11);
+  --panel-ink: rgb(8 10 15 / 0.55);
+
+  --ok: var(--status-success, #4caf50);
+  --warn: var(--status-warning, #ffc107);
+  --err: var(--status-deleted, #f44336);
+
+  /* Direction-B defaults; themes/generated/themes.css overrides accent/glow/wash. */
+  --accent: #71b0f7;
+  --accent-rgb: 113 176 247;
+  --accent-ink: #0a0d13;
+  --glow: rgb(113 176 247 / 0.32);
+  --wash-a: rgb(113 176 247 / 0.2);
+  --wash-b: rgb(113 176 247 / 0.13);
+}
