@@ -61,6 +61,13 @@ export function useRelated(videoId: string): UseQueryResult<Paged<VideoSummary>,
   });
 }
 
+/**
+ * Not yet consumed by a route: this is the data source for the Phase-2
+ * diagnostics panel (PRD §8 — "which parser version / client / expiry", to tell
+ * "YouTube changed something" apart from "this IP is blocked"). Kept here because
+ * `yt:diagnostics` is a registered Phase-1 channel and the panel is the next
+ * consumer.
+ */
 export function useDiagnostics(): UseQueryResult<AdapterDiagnostics, IpcError> {
   return useQuery<AdapterDiagnostics, IpcError>({
     queryKey: ytKeys.diagnostics(),

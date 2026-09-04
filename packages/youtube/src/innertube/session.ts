@@ -11,7 +11,12 @@
  *   `YT_PARSE_CHANGED` (stale player JS).
  */
 import { Innertube, UniversalCache } from 'youtubei.js';
-import { createRequire } from 'node:module';
+// Resolved at **build time** — youtubei.js is bundled into the app, so a
+// runtime `require('youtubei.js/package.json')` finds nothing in a packaged
+// build and `youtubeiVersion()` would report `'unknown'` in every real install
+// (F12). rollup/tsc inline this JSON. `session.test.ts` pins it against the
+// installed package so it cannot drift.
+import youtubeiPkg from 'youtubei.js/package.json' with { type: 'json' };
 
 type InnertubeConfig = Parameters<typeof Innertube.create>[0];
 
@@ -55,17 +60,8 @@ export class InnertubeSession {
   }
 }
 
-let cachedVersion: string | null = null;
-
 /** The installed youtubei.js version, for the diagnostics panel (PRD §8). */
 export function youtubeiVersion(): string {
-  if (cachedVersion != null) return cachedVersion;
-  try {
-    const require = createRequire(import.meta.url);
-    const pkg = require('youtubei.js/package.json') as { version?: unknown };
-    cachedVersion = typeof pkg.version === 'string' ? pkg.version : 'unknown';
-  } catch {
-    cachedVersion = 'unknown';
-  }
-  return cachedVersion;
+  const version = (youtubeiPkg as { version?: unknown }).version;
+  return typeof version === 'string' ? version : 'unknown';
 }

@@ -146,6 +146,16 @@ export const SHAKA_ERROR_CODE = {
   HTTP_ERROR: 1002,
 } as const;
 
+/**
+ * `shaka.util.Error.Severity`. shaka fires its `error` event for **both**
+ * severities — `streaming_engine.js` downgrades an error it has already handled
+ * (a disabled variant, an aborted operation) to `RECOVERABLE` and still calls
+ * `onError`. Latching `status: 'error'` on one of those freezes a happily
+ * playing video in a failed state. `shakaPlayer.ts` asserts these literals
+ * against shaka's own enum at module load.
+ */
+export const SHAKA_ERROR_SEVERITY = { RECOVERABLE: 1, CRITICAL: 2 } as const;
+
 /** `shaka.net.NetworkingEngine.RequestType.SEGMENT`. */
 export const SHAKA_REQUEST_TYPE_SEGMENT = 1;
 
@@ -285,6 +295,14 @@ export class PlaybackEngine {
   #recoveryTimer: ReturnType<typeof setTimeout> | null = null;
   #healthyTimer: ReturnType<typeof setTimeout> | null = null;
   #recovering = false;
+  /**
+   * Bridges the gap between the debounce timer firing and `#recover`'s prologue
+   * running: `#runExclusive` chains `#recover` onto `#tail`, so if another
+   * exclusive op is still in flight, neither `#recoveryTimer` nor `#recovering`
+   * is truthy for that window and a second timer could be armed. Set when the
+   * timer hands off, cleared at the very top of `#recover` (I3).
+   */
+  #recoveryQueued = false;
   #attempts = 0;
   #degraded = false;
 
@@ -299,8 +317,18 @@ export class PlaybackEngine {
     const detail = event.detail;
     this.#options.onError?.(detail);
     const reason = classifyShakaError(detail);
-    if (reason) this.#scheduleRecovery(reason);
-    else this.#setStatus('error');
+    if (reason) {
+      this.#scheduleRecovery(reason);
+      return;
+    }
+    // No recovery reason: only a genuinely fatal error should latch `error`.
+    // A shaka error explicitly marked `RECOVERABLE` (a text-track parse
+    // failure, a variant shaka disabled and moved past) leaves the video
+    // playing — reflecting it as `error` would be wrong for the rest of the
+    // session. Anything else (CRITICAL, or a synthetic error with no severity)
+    // is treated as fatal.
+    const severity = (detail as ShakaErrorLike | undefined)?.severity;
+    if (severity !== SHAKA_ERROR_SEVERITY.RECOVERABLE) this.#setStatus('error');
   };
 
   readonly #requestFilter: ShakaRequestFilter = (requestType) => {
@@ -472,18 +500,6 @@ export class PlaybackEngine {
     if (video) video.muted = !video.muted;
   }
 
-  getVideoElement(): HTMLVideoElement | null {
-    return this.#video;
-  }
-
-  getStatus(): PlaybackStatus {
-    return this.#status;
-  }
-
-  getSelection(): { height: QualitySelection; audioKey: string | null; text: TextSelection } {
-    return { ...this.#selection };
-  }
-
   /* ------------------------- track selection ------------------------- */
 
   /**
@@ -523,14 +539,18 @@ export class PlaybackEngine {
     if (!this.#manifest || !this.#player) return;
     // I3: the armed timer *is* the burst collapser. Everything that arrives
     // while a timer is pending, or while a recovery is running, is dropped.
-    if (this.#recoveryTimer !== null || this.#recovering) return;
+    if (this.#recoveryTimer !== null || this.#recovering || this.#recoveryQueued) return;
     this.#recoveryTimer = setTimeout(() => {
       this.#recoveryTimer = null;
+      this.#recoveryQueued = true;
       void this.#runExclusive(() => this.#recover(reason));
     }, this.#debounceMs);
   }
 
   async #recover(reason: RecoveryReason): Promise<void> {
+    // Cleared before every early return below, so the `attempts >= MAX` bail
+    // cannot strand the flag and wedge `#scheduleRecovery` shut.
+    this.#recoveryQueued = false;
     const player = this.#player;
     const video = this.#video;
     if (this.#destroyed || !player || !video || !this.#manifest) return;

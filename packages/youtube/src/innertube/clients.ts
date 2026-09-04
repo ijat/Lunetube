@@ -52,9 +52,10 @@ export interface ClientCapabilities {
  * Why a ladder entry cannot be attempted, as a sentence a user (or the PRD §8
  * diagnostics panel) can act on — or `null` when it *can* be attempted.
  *
- * This is the single source of truth for the skip logic: `attemptableClients`
- * is defined in terms of it, so the reason shown in diagnostics can never drift
- * from the reason a client was actually skipped.
+ * This is the single source of truth for the skip logic: `getStreams` walks
+ * `CLIENT_LADDER` and consults this per entry, and `getDiagnostics` reports it,
+ * so the reason shown in diagnostics can never drift from the reason a client
+ * was actually skipped.
  */
 export function ladderSkipReason(
   entry: ClientLadderEntry,
@@ -67,13 +68,4 @@ export function ladderSkipReason(
     return `${entry.client} needs a Proof-of-Origin token for googlevideo, and this build has no PO-token provider — its media URLs would return HTTP 403.`;
   }
   return null;
-}
-
-/**
- * The subset of the ladder we can actually attempt right now. With no PO-token
- * provider and no SABR strategy, that is `IOS` alone; the rest stay in the ladder
- * as documentation and as ready slots for a future SABR / PO-token phase.
- */
-export function attemptableClients(caps: ClientCapabilities = {}): ClientLadderEntry[] {
-  return CLIENT_LADDER.filter((entry) => ladderSkipReason(entry, caps) === null);
 }

@@ -3,6 +3,7 @@ import type { StreamManifest } from '@lunetube/shared';
 import {
   PlaybackEngine,
   SHAKA_ERROR_CODE,
+  SHAKA_ERROR_SEVERITY,
   SHAKA_REQUEST_TYPE_SEGMENT,
   audioKeyOf,
   classifyShakaError,
@@ -527,6 +528,29 @@ describe('403 stream recovery', () => {
     expect(h.resolveManifest).toHaveBeenCalledTimes(2);
   });
 
+  it('stops re-resolving once the attempt budget is spent even when every recovery "succeeds" (F4)', async () => {
+    // The scenario the top-of-`#recover` `attempts >= MAX` guard exists for:
+    // YouTube keeps handing out a fresh manifest and `player.load()` keeps
+    // succeeding, but the *new* segment URLs 403 too (a hard IP block). Every
+    // existing degrade test rejects `resolveManifest`/`loadImpl` and exits
+    // through the catch path instead, so this early-return branch was unreached.
+    // Without it, `resolveManifest` would be called on every 403 forever —
+    // an unbounded re-resolve loop against YouTube (plan F2/R1).
+    vi.useFakeTimers();
+    const h = await harness();
+    await h.engine.load(manifest());
+    // resolveManifest + loadImpl keep succeeding (harness defaults) — the fresh
+    // URLs just 403 again, modelled by re-emitting the error each round.
+
+    for (let i = 0; i < 3; i += 1) {
+      h.player.emitError(badHttp(403));
+      await vi.advanceTimersByTimeAsync(300);
+    }
+
+    expect(h.resolveManifest).toHaveBeenCalledTimes(2); // not 3 — the 3rd is refused
+    expect(h.health.at(-1)?.degraded).toBe(true);
+  });
+
   it('degrades when the reload itself keeps failing', async () => {
     vi.useFakeTimers();
     const h = await harness();
@@ -580,6 +604,31 @@ describe('403 stream recovery', () => {
     h.player.emitError(badHttp(403));
     await vi.advanceTimersByTimeAsync(300);
     expect(h.resolveManifest).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('shaka error severity (F1)', () => {
+  it('does not latch error status for a RECOVERABLE shaka error', async () => {
+    const h = await harness();
+    await h.engine.load(manifest());
+    expect(h.statuses).toContain('ready');
+
+    // e.g. a text-track parse failure shaka has already handled — it keeps
+    // playing, so the status must not flip to 'error'.
+    h.player.emitError({ severity: SHAKA_ERROR_SEVERITY.RECOVERABLE, code: 3016, data: [] });
+
+    expect(h.statuses).not.toContain('error');
+    expect(h.resolveManifest).not.toHaveBeenCalled();
+  });
+
+  it('still latches error status for a CRITICAL shaka error a re-resolve cannot fix', async () => {
+    const h = await harness();
+    await h.engine.load(manifest());
+
+    h.player.emitError({ severity: SHAKA_ERROR_SEVERITY.CRITICAL, code: 3016, data: [] });
+
+    expect(h.statuses).toContain('error');
+    expect(h.resolveManifest).not.toHaveBeenCalled();
   });
 });
 

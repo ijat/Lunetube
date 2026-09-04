@@ -1,6 +1,7 @@
 import shaka from 'shaka-player';
 import {
   SHAKA_ERROR_CODE,
+  SHAKA_ERROR_SEVERITY,
   SHAKA_REQUEST_TYPE_SEGMENT,
   type ShakaPlayerLike,
 } from './PlaybackEngine.js';
@@ -41,6 +42,16 @@ export function assertShakaConstants(): void {
   if (Number(shaka.net.NetworkingEngine.RequestType.SEGMENT) !== SHAKA_REQUEST_TYPE_SEGMENT) {
     mismatches.push(
       `RequestType.SEGMENT ${String(shaka.net.NetworkingEngine.RequestType.SEGMENT)} != ${SHAKA_REQUEST_TYPE_SEGMENT}`,
+    );
+  }
+  if (Number(shaka.util.Error.Severity.RECOVERABLE) !== SHAKA_ERROR_SEVERITY.RECOVERABLE) {
+    mismatches.push(
+      `Severity.RECOVERABLE ${String(shaka.util.Error.Severity.RECOVERABLE)} != ${SHAKA_ERROR_SEVERITY.RECOVERABLE}`,
+    );
+  }
+  if (Number(shaka.util.Error.Severity.CRITICAL) !== SHAKA_ERROR_SEVERITY.CRITICAL) {
+    mismatches.push(
+      `Severity.CRITICAL ${String(shaka.util.Error.Severity.CRITICAL)} != ${SHAKA_ERROR_SEVERITY.CRITICAL}`,
     );
   }
   if (mismatches.length > 0) {

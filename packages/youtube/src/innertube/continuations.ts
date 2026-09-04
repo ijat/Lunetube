@@ -32,7 +32,14 @@ export class ContinuationStore {
     this.#now = opts.now ?? Date.now;
   }
 
-  /** Store a feed object; returns the handle to hand back to the renderer. */
+  /**
+   * Store a feed object; returns the handle to hand back to the renderer.
+   *
+   * NOTE (F13): callers must not assume one object → one handle. `getRelated`'s
+   * watch-next pagination mutates a single `VideoInfo` in place and calls `put`
+   * on it again per page, so multiple handles can alias the same (newest-state)
+   * object. See `InnertubeYouTubeSource.#pageFromWatchNext`.
+   */
   put(value: unknown): string {
     this.#purge();
     const handle = randomUUID();

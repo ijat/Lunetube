@@ -33,7 +33,15 @@ export interface CaptionTrack {
 
 export interface StoryboardSpec {
   level: number;
+  /** Proxy-rewritten (`/img`) form of `templateUrl` with placeholders intact. */
   url: string;
+  /**
+   * Raw storyboard template, `$L`/`$N`/`$M` placeholders **un-rewritten**. Phase
+   * 4's scrubber preview substitutes the placeholders per tile and asks main to
+   * rewrite each concrete URL, so the renderer never needs to know the proxy's
+   * `?u=` wire format (decision A11).
+   */
+  templateUrl: string;
   rows: number;
   columns: number;
   intervalMs: number;

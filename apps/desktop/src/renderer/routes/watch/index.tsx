@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { PlayerSurface } from '../../player/PlayerSurface.js';
@@ -31,17 +31,25 @@ export function WatchRoute() {
 
   const [engine, setEngine] = useState<PlaybackEngine | null>(null);
   const [started, setStarted] = useState(false);
+  // A timestamp clicked from the poster state (no engine yet): remembered here
+  // and handed to `PlayerSurface` as its initial start time so the click is not
+  // silently discarded (F6).
+  const pendingSeekRef = useRef<number | null>(null);
 
   // New video → back to the poster.
   useEffect(() => {
     setStarted(false);
     setEngine(null);
+    pendingSeekRef.current = null;
   }, [id]);
 
   const handleSeek = useCallback(
     (seconds: number) => {
       if (engine) engine.seek(seconds);
-      else setStarted(true);
+      else {
+        pendingSeekRef.current = seconds;
+        setStarted(true);
+      }
     },
     [engine],
   );
@@ -54,7 +62,12 @@ export function WatchRoute() {
 
       <div className="watch__player">
         {started ? (
-          <PlayerSurface videoId={id} onEngineReady={setEngine} {...(poster ? { poster } : {})} />
+          <PlayerSurface
+            videoId={id}
+            onEngineReady={setEngine}
+            {...(poster ? { poster } : {})}
+            {...(pendingSeekRef.current != null ? { startTime: pendingSeekRef.current } : {})}
+          />
         ) : (
           <button
             type="button"

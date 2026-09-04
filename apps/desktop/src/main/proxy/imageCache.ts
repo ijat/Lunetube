@@ -126,7 +126,9 @@ export class ImageCache {
   }
 
   async #scan(): Promise<void> {
-    await mkdir(this.#dir, { recursive: true });
+    // 0700: the cache is a de-facto viewing history; assert privacy rather than
+    // inherit whatever the OS gave `userData` (S1). No-op on Windows (ACLs).
+    await mkdir(this.#dir, { recursive: true, mode: 0o700 });
     let names: string[];
     try {
       names = await readdir(this.#dir);
@@ -158,9 +160,24 @@ export class ImageCache {
     // Oldest first, so ranks come out ascending and anything touched in this
     // process outranks every pre-existing entry.
     found.sort((a, b) => a.mtimeMs - b.mtimeMs);
+
+    // A key can have two files on disk — `<key>.jpg` and `<key>.webp` — if the
+    // upstream content type changed between runs. Keep only the newest per key,
+    // delete the older file, and count each key's bytes exactly once (otherwise
+    // `#totalBytes` inflates by an entry `#evict` can never reclaim).
+    const newest = new Map<string, { ext: string; size: number }>();
+    const superseded: { key: string; ext: string }[] = [];
     for (const item of found) {
-      this.#entries.set(item.key, { ext: item.ext, size: item.size, rank: this.#rank++ });
-      this.#totalBytes += item.size;
+      const prior = newest.get(item.key);
+      if (prior !== undefined) superseded.push({ key: item.key, ext: prior.ext });
+      newest.set(item.key, { ext: item.ext, size: item.size });
+    }
+    for (const [key, entry] of newest) {
+      this.#entries.set(key, { ext: entry.ext, size: entry.size, rank: this.#rank++ });
+      this.#totalBytes += entry.size;
+    }
+    for (const loser of superseded) {
+      await unlink(join(this.#dir, `${loser.key}.${loser.ext}`)).catch(() => undefined);
     }
   }
 
@@ -287,7 +304,15 @@ export class ImageCache {
 
   #remember(key: string, ext: string, size: number): void {
     const previous = this.#entries.get(key);
-    if (previous !== undefined) this.#totalBytes -= previous.size;
+    if (previous !== undefined) {
+      this.#totalBytes -= previous.size;
+      if (previous.ext !== ext) {
+        // The old `<key>.<oldExt>` file is now unreachable: `#evict` only ever
+        // unlinks `<key>.<current ext>`, and the next `#scan` would double-count
+        // it. Best-effort delete; a failure must not fail the store.
+        void unlink(join(this.#dir, `${key}.${previous.ext}`)).catch(() => undefined);
+      }
+    }
     this.#entries.set(key, { ext, size, rank: this.#rank++ });
     this.#totalBytes += size;
   }

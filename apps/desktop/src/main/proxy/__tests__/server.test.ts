@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import {
   createServer,
   request as httpRequest,
@@ -574,6 +574,48 @@ describe('ImageCache — LRU eviction and concurrency', () => {
     expect(hit?.size).toBe(2048);
     const names = await readdir(dir);
     expect(names.filter((n) => n.startsWith(key))).toEqual([`${key}.jpg`]);
+  });
+
+  it('does not orphan or double-count a file when the content type changes (F8)', async () => {
+    const keyDir = await mkdtemp(join(tmpdir(), 'lunetube-cache-ext-'));
+    try {
+      const key = '0'.repeat(64);
+      const cache = new ImageCache({ dir: keyDir, maxBytes: 100_000 });
+      await cache.ready();
+
+      expect(await cache.store(key, 'image/jpeg', body(1000))).toBe(true);
+      // Same URL, now served as webp — the old `.jpg` must go.
+      expect(await cache.store(key, 'image/webp', body(1500))).toBe(true);
+
+      expect(cache.totalBytes).toBe(1500);
+      expect((await readdir(keyDir)).filter((n) => n.startsWith(key))).toEqual([`${key}.webp`]);
+
+      // A fresh instance scanning the directory must also count it exactly once.
+      const reopened = new ImageCache({ dir: keyDir, maxBytes: 100_000 });
+      await reopened.ready();
+      expect(reopened.totalBytes).toBe(1500);
+    } finally {
+      await rm(keyDir, { recursive: true, force: true });
+    }
+  });
+
+  it('collapses a stale duplicate left by an earlier run on scan (F8)', async () => {
+    const keyDir = await mkdtemp(join(tmpdir(), 'lunetube-cache-dup-'));
+    try {
+      const key = '1'.repeat(64);
+      // Two files for one key, as a pre-fix build could have left behind.
+      await writeFile(join(keyDir, `${key}.jpg`), Buffer.alloc(1000, 1));
+      await new Promise((r) => setTimeout(r, 10));
+      await writeFile(join(keyDir, `${key}.webp`), Buffer.alloc(1500, 1));
+
+      const cache = new ImageCache({ dir: keyDir, maxBytes: 100_000 });
+      await cache.ready();
+
+      expect(cache.totalBytes).toBe(1500); // newest only, counted once
+      expect((await readdir(keyDir)).filter((n) => n.startsWith(key))).toEqual([`${key}.webp`]);
+    } finally {
+      await rm(keyDir, { recursive: true, force: true });
+    }
   });
 
   it('is disabled when maxBytes is 0', async () => {

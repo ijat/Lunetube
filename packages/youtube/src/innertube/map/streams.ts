@@ -271,9 +271,11 @@ export function mapCaptionTracks(
 }
 
 /**
- * `PlayerStoryboardSpec.boards` → `StoryboardSpec[]`. The `template_url` keeps
- * its `$L`/`$N`/`$M` placeholders (Phase 4 expands them for the scrubber
- * preview); only the host is rewritten through the `/img` proxy route.
+ * `PlayerStoryboardSpec.boards` → `StoryboardSpec[]`. Each spec carries **both**
+ * the proxy-rewritten `url` and the raw `templateUrl` (`$L`/`$N`/`$M`
+ * placeholders intact). The rewritten `url` is only useful as a whole-sheet
+ * fetch; Phase 4's per-tile scrubber preview substitutes the placeholders in
+ * `templateUrl` and rewrites each concrete URL through main (decision A11).
  */
 export function mapStoryboards(
   storyboards: RawStoryboards | null | undefined,
@@ -286,13 +288,14 @@ export function mapStoryboards(
       const template = normalizeUrl(b.template_url);
       if (template == null) return null;
       // `$L`/`$N`/`$M` are valid URL characters, so the template parses as-is.
-      // NOTE (P1-3 / Phase 4): the real `/img` rewriter base64-encodes the whole
-      // URL into `?u=`, which would bury these placeholders — storyboard preview
-      // expansion needs the rewriter applied per-tile after substitution, not here.
+      // The `/img` rewriter base64-encodes the whole URL into `?u=`, burying the
+      // placeholders — so `templateUrl` keeps the raw form for Phase 4's per-tile
+      // expansion (decision A11), while `url` is the rewritten whole-sheet form.
       const url = rewriteUrl(template, rewriteImage) ?? template;
       return {
         level,
         url,
+        templateUrl: template,
         rows: toIntOr(b.rows, 0),
         columns: toIntOr(b.columns, 0),
         intervalMs: toIntOr(b.interval, 0),

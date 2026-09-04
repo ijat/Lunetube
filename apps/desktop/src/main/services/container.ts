@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
 import {
@@ -40,10 +41,13 @@ function createReal(proxy: MediaProxy): YouTubeSource {
     image: (url) => new URL(proxy.imageUrl(url.toString())),
     caption: (url) => new URL(proxy.captionUrl(url.toString())),
   };
-  return new InnertubeYouTubeSource({
-    cacheDir: join(app.getPath('userData'), 'ytcache'),
-    rewriters,
-  });
+  const cacheDir = join(app.getPath('userData'), 'ytcache');
+  // youtubei.js's UniversalCache writes with no `mode`, so create the directory
+  // ourselves at 0700 first — it holds the persisted InnerTube session incl. the
+  // stable anonymous `visitor_data` (S1). 0700 gates traversal, so the mode-less
+  // files land inside a private dir. No-op on Windows (ACLs).
+  mkdirSync(cacheDir, { recursive: true, mode: 0o700 });
+  return new InnertubeYouTubeSource({ cacheDir, rewriters });
 }
 
 function createFake(): YouTubeSource {
