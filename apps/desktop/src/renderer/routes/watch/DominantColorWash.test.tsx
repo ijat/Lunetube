@@ -70,9 +70,14 @@ async function render(videoId: string, thumbnailUrl: string | null): Promise<voi
 describe('DominantColorWash', () => {
   it('writes --wash-a/-b and --glow from a proxied thumbnail', async () => {
     await render('vid-a', 'http://127.0.0.1:5599/tok/img?u=A');
-    expect(washA()).toMatch(/^rgb\(\d+ \d+ \d+ \/ 0\.24\)$/);
-    expect(document.documentElement.style.getPropertyValue('--wash-b')).not.toBe('');
-    expect(document.documentElement.style.getPropertyValue('--glow')).not.toBe('');
+    // Low alphas for real OS glass (step P2-G / decision A21).
+    expect(washA()).toMatch(/^rgb\(\d+ \d+ \d+ \/ 0\.12\)$/);
+    expect(document.documentElement.style.getPropertyValue('--wash-b')).toMatch(
+      /^rgb\(\d+ \d+ \d+ \/ 0\.08\)$/,
+    );
+    expect(document.documentElement.style.getPropertyValue('--glow')).toMatch(
+      /^rgb\(\d+ \d+ \d+ \/ 0\.3\)$/,
+    );
   });
 
   it('changes the wash when the video id + thumbnail change', async () => {

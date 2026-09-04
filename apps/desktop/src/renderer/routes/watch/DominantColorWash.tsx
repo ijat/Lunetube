@@ -73,10 +73,14 @@ export function DominantColorWash({ videoId, thumbnailUrl }: DominantColorWashPr
         const glow = palette.Vibrant ?? palette.LightVibrant ?? primary;
         if (!primary || !secondary || !glow) return;
 
+        // Low alphas (step P2-G / decision A21): over the OS material the
+        // backdrop washes compound with the desktop showing through, so this is
+        // a hint of the video's colour on the glass, not a wash that fights the
+        // translucency. --glow stays the one place the colour still reads.
         const root = document.documentElement.style;
-        root.setProperty('--wash-a', rgbToken(primary.rgb, 0.24));
-        root.setProperty('--wash-b', rgbToken(secondary.rgb, 0.16));
-        root.setProperty('--glow', rgbToken(glow.rgb, 0.32));
+        root.setProperty('--wash-a', rgbToken(primary.rgb, 0.12));
+        root.setProperty('--wash-b', rgbToken(secondary.rgb, 0.08));
+        root.setProperty('--glow', rgbToken(glow.rgb, 0.3));
       })
       .catch(() => {
         // Colour extraction is a cosmetic enhancement; a failure just leaves the
