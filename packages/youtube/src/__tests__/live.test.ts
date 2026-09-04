@@ -168,6 +168,38 @@ describe.skipIf(!LIVE)('live YouTube (LUNE_LIVE=1)', () => {
     if (last.ok) expect(last.value.continuation).toBeUndefined();
   }, 600_000);
 
+  it(`getComments(${CAPTIONED_ID}, 'top') returns threads whose replies actually load`, async () => {
+    const page = await source.getComments({ videoId: CAPTIONED_ID, sort: 'top' });
+    expect(page.ok).toBe(true);
+    if (!page.ok) return;
+    expect(page.value.threads.length).toBeGreaterThanOrEqual(10);
+    expect(page.value.threads.every((t) => t.comment.id.length > 0)).toBe(true);
+
+    const withReplies = page.value.threads.filter((t) => t.comment.replyCount > 0);
+    expect(withReplies.length).toBeGreaterThanOrEqual(1);
+
+    // The reply state machine against the real thing: `replies` is non-null for
+    // a thread with replies, the `replies-first:` handle loads page 1, and a
+    // *replay* of that same handle returns the same page rather than advancing
+    // (the property P2-5 rests on — see `comments.test.ts` for the pinned form).
+    const target = withReplies[0];
+    expect(target?.replies).not.toBeNull();
+    const handle = target?.replies?.continuation;
+    expect(handle).toMatch(/^replies-first:/);
+    if (handle == null) return;
+
+    const first = await source.getCommentReplies({ handle });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.value.items.length).toBeGreaterThanOrEqual(1);
+
+    const replay = await source.getCommentReplies({ handle });
+    expect(replay.ok).toBe(true);
+    if (!replay.ok) return;
+    expect(replay.value.items.map((c) => c.id)).toEqual(first.value.items.map((c) => c.id));
+    expect(replay.value.continuation).toBe(first.value.continuation);
+  }, 60_000);
+
   it('resolveUrl(@handle) resolves to a channel id over the network', async () => {
     const res = await source.resolveUrl({ url: 'https://www.youtube.com/@veritasium' });
     expect(res.ok).toBe(true);

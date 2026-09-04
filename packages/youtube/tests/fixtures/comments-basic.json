@@ -1,0 +1,125 @@
+{
+  "meta": {
+    "videoId": "dQw4w9WgXcQ",
+    "sort": "top",
+    "key": "dQw4w9WgXcQ|top",
+    "continuation": "comments-page2",
+    "note": "HAND-AUTHORED, never recorded (plan A20) — recording real comments would commit third-party names, channel ids, avatars and text to a public repo. Every author here is invented. Covers: pinned+hearted+uploader+verified, one prepopulated reply, a not-prepopulated two-page reply chain, a timestamped comment, a thread whose comment is null, and a comment with every optional field absent."
+  },
+  "header": {
+    "count": { "text": "12,483 Comments" },
+    "comments_count": { "text": "12K" }
+  },
+  "contents": [
+    {
+      "type": "CommentThread",
+      "rendering_priority": "RENDERING_PRIORITY_PINNED_COMMENT",
+      "has_replies": false,
+      "comment": {
+        "comment_id": "UgxFixturePinned00000001",
+        "author": {
+          "id": "UC1111111111111111111111",
+          "name": "Fixture Channel",
+          "thumbnails": [
+            { "url": "https://yt3.ggpht.com/fixture-owner.jpg", "width": 176, "height": 176 }
+          ],
+          "is_verified": true
+        },
+        "content": { "text": "Thanks for watching! Chapters are in the description." },
+        "like_count": "8.4K",
+        "published_time": "2 years ago",
+        "is_hearted": true,
+        "is_pinned": true,
+        "author_is_channel_owner": true,
+        "reply_count": "0"
+      }
+    },
+    {
+      "type": "CommentThread",
+      "has_replies": true,
+      "is_prepopulated": true,
+      "replies_fixture": "comment-replies-single",
+      "comment": {
+        "comment_id": "UgxFixturePrepop00000002",
+        "author": {
+          "id": "UC2222222222222222222222",
+          "name": "Fixture Artist",
+          "thumbnails": [
+            { "url": "https://yt3.ggpht.com/fixture-artist.jpg", "width": 176, "height": 176 }
+          ],
+          "is_verified_artist": true
+        },
+        "content": { "text": "The bridge on this track is unreal." },
+        "like_count": "1.2K",
+        "published_time": "11 months ago",
+        "reply_count": "1"
+      },
+      "replies": [
+        {
+          "type": "CommentThread",
+          "comment": {
+            "comment_id": "UgxFixtureReplyPrepop0001",
+            "author": {
+              "id": "UC3333333333333333333333",
+              "name": "Fixture Viewer A",
+              "thumbnails": [
+                { "url": "https://yt3.ggpht.com/fixture-viewer-a.jpg", "width": 176, "height": 176 }
+              ]
+            },
+            "content": { "text": "Agreed, it carries the whole song." },
+            "like_count": "34",
+            "published_time": "10 months ago"
+          }
+        }
+      ]
+    },
+    {
+      "type": "CommentThread",
+      "has_replies": true,
+      "replies_fixture": "comment-replies-many-p1",
+      "comment": {
+        "comment_id": "UgxFixtureManyReplies0003",
+        "author": {
+          "id": "UC4444444444444444444444",
+          "name": "Fixture Viewer B",
+          "thumbnails": [
+            { "url": "https://yt3.ggpht.com/fixture-viewer-b.jpg", "width": 176, "height": 176 }
+          ]
+        },
+        "content": { "text": "Who else is still here in 2026?" },
+        "like_count": "203K",
+        "published_time": "3 years ago",
+        "reply_count": "1.4K"
+      }
+    },
+    {
+      "type": "CommentThread",
+      "has_replies": false,
+      "comment": {
+        "comment_id": "UgxFixtureTimestamps0004",
+        "author": {
+          "id": "UC5555555555555555555555",
+          "name": "Fixture Viewer C",
+          "thumbnails": []
+        },
+        "content": {
+          "text": "Best bits: 0:42 the drop, 1:05:09 the outro. Skip to 2:13 if you are in a hurry."
+        },
+        "like_count": "512",
+        "published_time": "4 months ago",
+        "reply_count": "0"
+      }
+    },
+    {
+      "type": "CommentThread",
+      "has_replies": false,
+      "comment": null
+    },
+    {
+      "type": "CommentThread",
+      "comment": {
+        "comment_id": "UgxFixtureDegraded000006"
+      }
+    }
+  ]
+}

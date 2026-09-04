@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "note": "HAND-AUTHORED (plan A20). Page 2 of comments-basic — reachable only through that fixture's continuation, so it carries no `key`/`videoId` and can never satisfy a first-page lookup. Ids are disjoint from page 1's so a duplicate-id regression is visible."
+  },
+  "header": {
+    "count": { "text": "12,483 Comments" }
+  },
+  "contents": [
+    {
+      "type": "CommentThread",
+      "has_replies": false,
+      "comment": {
+        "comment_id": "UgxFixturePage2000000001",
+        "author": {
+          "id": "UC6666666666666666666666",
+          "name": "Fixture Viewer D",
+          "thumbnails": [
+            { "url": "https://yt3.ggpht.com/fixture-viewer-d.jpg", "width": 176, "height": 176 }
+          ]
+        },
+        "content": { "text": "Second page of comments." },
+        "like_count": "77",
+        "published_time": "8 months ago",
+        "reply_count": "0"
+      }
+    },
+    {
+      "type": "CommentThread",
+      "has_replies": false,
+      "comment": {
+        "comment_id": "UgxFixturePage2000000002",
+        "author": {
+          "id": "UC7777777777777777777777",
+          "name": "Fixture Viewer E",
+          "thumbnails": []
+        },
+        "content": { "text": "Still a great track." },
+        "like_count": "9",
+        "published_time": "6 months ago",
+        "reply_count": "0"
+      }
+    }
+  ]
+}

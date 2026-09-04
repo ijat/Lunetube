@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "continuation": "comment-replies-many-p2",
+    "note": "HAND-AUTHORED (plan A20). Reply page 1 of the NOT-prepopulated thread in comments-basic (`replies-first:` → a real fetch). Ids are disjoint from page 2's."
+  },
+  "replies": [
+    {
+      "type": "CommentThread",
+      "comment": {
+        "comment_id": "UgxFixtureReplyMany0p1a",
+        "author": {
+          "id": "UCaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "Fixture Viewer H",
+          "thumbnails": [
+            { "url": "https://yt3.ggpht.com/fixture-viewer-h.jpg", "width": 176, "height": 176 }
+          ]
+        },
+        "content": { "text": "Present." },
+        "like_count": "1.1K",
+        "published_time": "2 years ago"
+      }
+    },
+    {
+      "type": "CommentThread",
+      "comment": {
+        "comment_id": "UgxFixtureReplyMany0p1b",
+        "author": {
+          "id": "UCbbbbbbbbbbbbbbbbbbbbbb",
+          "name": "Fixture Viewer I",
+          "thumbnails": []
+        },
+        "content": { "text": "Checking in at 0:15 as tradition demands." },
+        "like_count": "88",
+        "published_time": "1 year ago"
+      }
+    }
+  ]
+}

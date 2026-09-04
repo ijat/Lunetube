@@ -74,15 +74,33 @@ describe('FakeYouTubeSource — the seam CI runs against', () => {
     }
   });
 
-  it('the two still-unwritten Phase-2 methods return NOT_IMPLEMENTED', async () => {
+  it('every YouTubeSource method is implemented — nothing returns NOT_IMPLEMENTED', async () => {
     const results = await Promise.all([
-      src.getComments({ videoId: 'x', sort: 'top' }),
-      src.getCommentReplies({ handle: 'h' }),
+      src.getVideo({ videoId: 'LXb3EKWsInQ' }),
+      src.getRelated({ videoId: 'LXb3EKWsInQ' }),
+      src.getDiagnostics(),
+      src.search({ query: 'lofi' }),
+      src.getSearchSuggestions({ query: 'lofi' }),
+      src.getComments({ videoId: 'dQw4w9WgXcQ', sort: 'top' }),
+      src.getCommentReplies({ handle: 'replies-first:comment-replies-single' }),
+      src.getChannel({ channelId: 'UC1111111111111111111111', tab: 'videos' }),
+      src.getPlaylist({ playlistId: 'PLbasic00000000000000000001' }),
+      src.resolveUrl({ url: 'https://youtu.be/dQw4w9WgXcQ' }),
     ]);
     for (const res of results) {
-      expect(res.ok).toBe(false);
-      if (!res.ok) expect(res.error.code).toBe('NOT_IMPLEMENTED');
+      expect(res.ok).toBe(true);
     }
+    // `getStreams` is the one method whose *fixture-specific* failures are real
+    // (a live video), so it is asserted in its own cases above rather than here.
+  });
+
+  it('getComments / getCommentReplies are implemented (P2-5)', async () => {
+    const page = await src.getComments({ videoId: 'dQw4w9WgXcQ', sort: 'top' });
+    expect(page.ok).toBe(true);
+    const replies = await src.getCommentReplies({
+      handle: 'replies-first:comment-replies-many-p1',
+    });
+    expect(replies.ok).toBe(true);
   });
 
   it('search / getSearchSuggestions / resolveUrl are implemented (P2-3)', async () => {

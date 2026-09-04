@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "videoId": "dQw4w9WgXcQ",
+    "sort": "newest",
+    "key": "dQw4w9WgXcQ|newest",
+    "note": "HAND-AUTHORED (plan A20). The same video under `sort: 'newest'`. Exists so the fake serves both sorts: the real adapter bakes the sort into the request token (never `applySort`, which throws — P2-F6 #2), so `sort` is a first-page-only input on both sides."
+  },
+  "header": {
+    "count": { "text": "12,483 Comments" }
+  },
+  "contents": [
+    {
+      "type": "CommentThread",
+      "has_replies": false,
+      "comment": {
+        "comment_id": "UgxFixtureNewest00000001",
+        "author": {
+          "id": "UC8888888888888888888888",
+          "name": "Fixture Viewer F",
+          "thumbnails": []
+        },
+        "content": { "text": "Posted a minute ago." },
+        "like_count": "0",
+        "published_time": "1 minute ago",
+        "reply_count": "0"
+      }
+    },
+    {
+      "type": "CommentThread",
+      "has_replies": false,
+      "comment": {
+        "comment_id": "UgxFixtureNewest00000002",
+        "author": {
+          "id": "UC9999999999999999999999",
+          "name": "Fixture Viewer G",
+          "thumbnails": []
+        },
+        "content": { "text": "Posted an hour ago." },
+        "like_count": "2",
+        "published_time": "1 hour ago",
+        "reply_count": "0"
+      }
+    }
+  ]
+}
