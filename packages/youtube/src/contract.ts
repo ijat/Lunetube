@@ -9,13 +9,15 @@
  * backend implements `YouTubeSource` in a sibling directory and a factory picks
  * one.
  *
- * Phase 1 implements `getVideo`, `getStreams`, `getRelated` and `getDiagnostics`.
- * The remaining seven methods return a `NOT_IMPLEMENTED` `LuneError` until
- * Phase 2 fills them in (search / channel / comments / playlist / resolveUrl).
+ * Phase 1 implemented `getVideo`, `getStreams`, `getRelated` and
+ * `getDiagnostics`. Phase 2 adds `search`, `getSearchSuggestions`,
+ * `getComments`, `getCommentReplies`, `getChannel`, `getPlaylist` and
+ * `resolveUrl`; each source implementation returns a `NOT_IMPLEMENTED`
+ * `LuneError` until its mapper lands.
  */
 import type {
   AdapterDiagnostics,
-  ChannelDetail,
+  ChannelPage,
   ChannelTab,
   Comment,
   CommentPage,
@@ -60,7 +62,6 @@ export const identityRewriter = (url: URL): URL => url;
 
 export interface GetRelatedParams {
   videoId: string;
-  continuation?: string;
 }
 
 export interface SearchParams {
@@ -76,9 +77,13 @@ export interface GetCommentsParams {
 }
 
 export interface GetCommentRepliesParams {
-  /** Opaque handle minted by `getComments` for a thread with replies. */
+  /**
+   * A single opaque handle (A17). It encodes both the target `CommentThread`
+   * *and* the action to take on it — the same object needs `getReplies()` for
+   * reply page 1 and `getContinuation()` for page 2 (plan P2-F2), so the handle
+   * carries a kind prefix (`replies-first:` / `replies-more:`).
+   */
   handle: string;
-  continuation: string;
 }
 
 export interface GetChannelParams {
@@ -111,9 +116,7 @@ export interface YouTubeSource {
   getSearchSuggestions(params: { query: string }): Promise<Result<string[], LuneError>>;
   getComments(params: GetCommentsParams): Promise<Result<CommentPage, LuneError>>;
   getCommentReplies(params: GetCommentRepliesParams): Promise<Result<Paged<Comment>, LuneError>>;
-  getChannel(
-    params: GetChannelParams,
-  ): Promise<Result<ChannelDetail | Paged<VideoSummary>, LuneError>>;
+  getChannel(params: GetChannelParams): Promise<Result<ChannelPage, LuneError>>;
   getPlaylist(params: GetPlaylistParams): Promise<Result<PlaylistDetail, LuneError>>;
   resolveUrl(params: { url: string }): Promise<Result<NavTarget, LuneError>>;
 }

@@ -79,7 +79,7 @@ describe('FakeYouTubeSource — the seam CI runs against', () => {
       src.search({ query: 'x' }),
       src.getSearchSuggestions({ query: 'x' }),
       src.getComments({ videoId: 'x', sort: 'top' }),
-      src.getCommentReplies({ handle: 'h', continuation: 'c' }),
+      src.getCommentReplies({ handle: 'h' }),
       src.getChannel({ channelId: 'x', tab: 'videos' }),
       src.getPlaylist({ playlistId: 'x' }),
       src.resolveUrl({ url: 'https://youtu.be/x' }),

@@ -13,7 +13,7 @@ import {
   makeLuneError,
   ok,
   type AdapterDiagnostics,
-  type ChannelDetail,
+  type ChannelPage,
   type Comment,
   type CommentPage,
   type LuneError,
@@ -138,10 +138,6 @@ export class FakeYouTubeSource implements YouTubeSource {
   async getRelated(params: GetRelatedParams): Promise<Result<Paged<VideoSummary>, LuneError>> {
     const fixture = this.#find(params.videoId);
     if (fixture == null) return err(this.#notFound(params.videoId));
-    if (params.continuation != null) {
-      // Fixtures hold a single page; a second page is always empty.
-      return ok({ items: [] });
-    }
     return ok({ items: mapFeedVideos(fixture.watch_next_feed, this.#image) });
   }
 
@@ -173,9 +169,7 @@ export class FakeYouTubeSource implements YouTubeSource {
   ): Promise<Result<Paged<Comment>, LuneError>> {
     return err(notImplemented('getCommentReplies'));
   }
-  async getChannel(
-    _params: GetChannelParams,
-  ): Promise<Result<ChannelDetail | Paged<VideoSummary>, LuneError>> {
+  async getChannel(_params: GetChannelParams): Promise<Result<ChannelPage, LuneError>> {
     return err(notImplemented('getChannel'));
   }
   async getPlaylist(_params: GetPlaylistParams): Promise<Result<PlaylistDetail, LuneError>> {

@@ -16,3 +16,15 @@ export interface ChannelDetail extends ChannelRef {
   isVerified: boolean;
   availableTabs: ChannelTab[];
 }
+
+/** The "About" tab of a channel page (plan P2-1 / A16). */
+export interface ChannelAbout {
+  description: string;
+  joinedText: string | null;
+  viewCountText: string | null;
+  videoCountText: string | null;
+  subscriberText: string | null;
+  country: string | null;
+  /** External links — opened via `app:openExternal`, never proxy-rewritten. */
+  links: { title: string; url: string }[];
+}

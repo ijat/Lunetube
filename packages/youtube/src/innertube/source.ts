@@ -20,7 +20,7 @@ import {
   makeLuneError,
   ok,
   type AdapterDiagnostics,
-  type ChannelDetail,
+  type ChannelPage,
   type Comment,
   type CommentPage,
   type LuneError,
@@ -228,21 +228,6 @@ export class InnertubeYouTubeSource implements YouTubeSource {
     if (videoId == null) return err(invalidId());
 
     return this.#guard(async (yt) => {
-      if (params.continuation != null) {
-        const stored = this.#related.get(params.continuation);
-        if (stored == null) {
-          return err(
-            makeLuneError('INVALID_INPUT', 'Unknown or expired related-videos continuation.', {
-              hint: 'Reload the video to start a fresh related feed.',
-            }),
-          );
-        }
-        const next = await (
-          stored as { getWatchNextContinuation(): Promise<unknown> }
-        ).getWatchNextContinuation();
-        return ok(this.#pageFromWatchNext(next));
-      }
-
       const info = await yt.getInfo(videoId);
       return ok(this.#pageFromWatchNext(info));
     });
@@ -310,9 +295,7 @@ export class InnertubeYouTubeSource implements YouTubeSource {
   ): Promise<Result<Paged<Comment>, LuneError>> {
     return err(notImplemented('getCommentReplies'));
   }
-  async getChannel(
-    _params: GetChannelParams,
-  ): Promise<Result<ChannelDetail | Paged<VideoSummary>, LuneError>> {
+  async getChannel(_params: GetChannelParams): Promise<Result<ChannelPage, LuneError>> {
     return err(notImplemented('getChannel'));
   }
   async getPlaylist(_params: GetPlaylistParams): Promise<Result<PlaylistDetail, LuneError>> {

@@ -1,10 +1,15 @@
 import type { Result } from './result.js';
 import type { LuneError } from './errors.js';
-import type { AdapterDiagnostics, Paged } from './models/common.js';
+import type { AdapterDiagnostics, NavTarget, Paged } from './models/common.js';
 import type { VideoDetail, VideoSummary } from './models/video.js';
 import type { StreamManifest, StreamPrefs } from './models/stream.js';
 import type { Settings } from './models/settings.js';
 import type { WindowState } from './models/window.js';
+import type { ChannelTab } from './models/channel.js';
+import type { ChannelPage } from './models/channelPage.js';
+import type { Comment, CommentPage, CommentSort } from './models/comment.js';
+import type { PlaylistDetail } from './models/playlist.js';
+import type { SearchFilters, SearchPage } from './models/search.js';
 
 /**
  * Single source of truth for IPC channel names. Main and preload both import
@@ -19,6 +24,13 @@ export const CHANNELS = {
   ytVideo: 'yt:video',
   ytStreams: 'yt:streams',
   ytRelated: 'yt:related',
+  ytSearch: 'yt:search',
+  ytSearchSuggestions: 'yt:searchSuggestions',
+  ytComments: 'yt:comments',
+  ytCommentReplies: 'yt:commentReplies',
+  ytChannel: 'yt:channel',
+  ytPlaylist: 'yt:playlist',
+  ytResolveUrl: 'yt:resolveUrl',
   ytDiagnostics: 'yt:diagnostics',
   appGetSettings: 'app:getSettings',
   appSetSettings: 'app:setSettings',
@@ -36,7 +48,16 @@ export const EVENT_CHANNELS = {
 export interface IpcRequests {
   'yt:video': { videoId: string };
   'yt:streams': { videoId: string; prefs: StreamPrefs };
-  'yt:related': { videoId: string; continuation?: string };
+  // A13 / P2-F2: `getWatchNextContinuation()` mutates `VideoInfo` in place, so
+  // the up-next rail is single-page — no `continuation` field.
+  'yt:related': { videoId: string };
+  'yt:search': { query: string; filters?: SearchFilters; continuation?: string };
+  'yt:searchSuggestions': { query: string };
+  'yt:comments': { videoId: string; sort: CommentSort; continuation?: string };
+  'yt:commentReplies': { handle: string };
+  'yt:channel': { channelId: string; tab: ChannelTab; continuation?: string };
+  'yt:playlist': { playlistId: string; continuation?: string };
+  'yt:resolveUrl': { url: string };
   'yt:diagnostics': Record<string, never>;
   'app:getSettings': Record<string, never>;
   'app:setSettings': { patch: Partial<Settings> };
@@ -49,6 +70,13 @@ export interface IpcResults {
   'yt:video': VideoDetail;
   'yt:streams': StreamManifest;
   'yt:related': Paged<VideoSummary>;
+  'yt:search': SearchPage;
+  'yt:searchSuggestions': string[];
+  'yt:comments': CommentPage;
+  'yt:commentReplies': Paged<Comment>;
+  'yt:channel': ChannelPage;
+  'yt:playlist': PlaylistDetail;
+  'yt:resolveUrl': NavTarget;
   'yt:diagnostics': AdapterDiagnostics;
   'app:getSettings': Settings;
   'app:setSettings': Settings;
