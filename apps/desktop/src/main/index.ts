@@ -38,12 +38,6 @@ if (!app.requestSingleInstanceLock()) {
     }
   });
 
-  // Registered before the async startup work below — it does not depend on the
-  // proxy, and it is the macOS dock-click recovery path.
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) spawnWindow();
-  });
-
   app
     .whenReady()
     .then(async () => {
@@ -66,6 +60,18 @@ if (!app.requestSingleInstanceLock()) {
       registerAppIpc();
       registerYoutubeIpc();
       spawnWindow();
+
+      // Registered only after the first window and every IPC handler exist. It
+      // must NOT be registered earlier: `createMainWindow` has no idempotency
+      // guard, so an `activate` firing during `await startProxy(...)` would spawn
+      // a window before `registerYoutubeIpc` (its `yt:*` invokes would reject)
+      // and the startup chain would then spawn a second, orphaning the first.
+      // The early registration bought nothing anyway — the `.catch` below calls
+      // `app.exit(1)`, so there is no windowless-but-alive process for a macOS
+      // dock click to recover before startup completes.
+      app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) spawnWindow();
+      });
     })
     .catch((cause: unknown) => {
       // A failed loopback bind (a locked-down host, an EDR product refusing
