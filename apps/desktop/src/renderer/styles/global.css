@@ -196,7 +196,11 @@ button {
 .topbar__search {
   /* Short centred pill that grows on focus. It carries a faint dark scrim
    * (unlike the rest of the bar, which stays clear glass) because an input
-   * field needs a stable backing for its text and caret over the OS material. */
+   * field needs a stable backing for its text and caret over the OS material.
+   * `position: relative` anchors the `SearchSuggestions` popup below it — the
+   * only ancestor between here and `.stage`'s `overflow: hidden` is `.topbar`
+   * itself, which sets no overflow, so the popup is never clipped. */
+  position: relative;
   justify-self: center;
   width: 264px;
   display: flex;
@@ -217,6 +221,7 @@ button {
 }
 .topbar__search input {
   flex: 1;
+  min-width: 0;
   border: 0;
   background: transparent;
   outline: none;
@@ -226,6 +231,50 @@ button {
 .topbar__search input::placeholder {
   color: var(--fg-2);
   opacity: 1;
+}
+
+/* ---- search suggestions (shell/SearchSuggestions.tsx, plan P2-8) ---- */
+.search-suggest {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+.search-suggest__popup {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  z-index: var(--z-menu);
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--space-2);
+  list-style: none;
+  border-radius: var(--radius-panel);
+  border: var(--glass-hairline);
+  background: var(--glass-2);
+  backdrop-filter: blur(var(--blur-panel)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--blur-panel)) saturate(140%);
+  box-shadow: 0 24px 48px -16px rgb(0 0 0 / 0.5);
+  /* A dropdown of real query suggestions, not decorative chrome. */
+  text-shadow: none;
+}
+.search-suggest__option button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.search-suggest__option:hover button,
+.search-suggest__option.is-active button {
+  background: var(--surface-2);
+  color: var(--fg-1);
 }
 .topbar__nav {
   display: flex;

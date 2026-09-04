@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TopBar } from './TopBar.js';
 
@@ -20,11 +21,17 @@ function render(path: string): void {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
+  // TopBar now mounts `SearchSuggestions` (`useSearchSuggestions`) and reads
+  // `useQueryClient()` itself for the paste-a-URL flow (plan P2-8) — both need
+  // a `QueryClientProvider` in scope, unlike the pre-P2-8 TopBar.
+  const queryClient = new QueryClient();
   act(() => {
     root.render(
-      <MemoryRouter initialEntries={[path]}>
-        <TopBar />
-      </MemoryRouter>,
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[path]}>
+          <TopBar />
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
   });
 }
