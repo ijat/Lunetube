@@ -1,0 +1,138 @@
+/* Channel route (plan P2-9). Content surfaces, not chrome (ARCHITECTURE.md
+ * "Window materials / glass"): the avatar row and the About description box
+ * are each ONE `.glass-panel` blur layer; nothing here stacks a second. The
+ * channel name is large Bricolage display type, so it resets the glass text
+ * shadow via the shared `.display` utility (same rule as `.route__title`). */
+
+/* ---- header ---- */
+.chan-header {
+  margin-bottom: var(--space-6);
+}
+.chan-header__banner {
+  width: 100%;
+  aspect-ratio: 1280 / 300;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: linear-gradient(145deg, #1d2d49, #0c1320);
+  border: 1px solid var(--stroke-soft);
+  margin-bottom: var(--space-4);
+}
+.chan-header__banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.chan-header__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-panel);
+}
+.chan-header__avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  flex: none;
+  object-fit: cover;
+  background: linear-gradient(135deg, #3a4a66, #20283a);
+}
+.chan-header__meta {
+  min-width: 0;
+  flex: 1;
+}
+.chan-header__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xl);
+  text-wrap: balance;
+}
+.chan-header__verified {
+  color: var(--fg-3);
+  flex: none;
+}
+.chan-header__sub {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--fg-3);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ---- tabs ---- */
+.chan-tabs {
+  margin-bottom: var(--space-6);
+}
+
+/* ---- results ---- */
+.channel__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 28px 22px;
+}
+.channel__more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-8) 0 var(--space-4);
+}
+.channel__sentinel {
+  width: 100%;
+  height: 1px;
+}
+/* Shorts get a 9:16 thumb — a thin wrapper class over `VideoCard`, not a fork. */
+.channel__shorts-cell .card__thumb {
+  aspect-ratio: 9 / 16;
+}
+
+/* ---- about tab ---- */
+.chan-about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 640px;
+}
+.chan-about__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  font-size: 11.5px;
+  color: var(--fg-3);
+}
+.chan-about__desc {
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-panel);
+  font-size: 12.5px;
+  line-height: 1.62;
+  color: var(--fg-2);
+  white-space: pre-wrap;
+  /* Long-form body copy on a tinted surface — no glass shadow (ARCHITECTURE.md
+   * "Window materials / glass"), same reset as `watch__desc`. */
+  text-shadow: none;
+}
+.chan-about__ts {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-1);
+}
+.chan-about__links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.chan-about__link {
+  font: inherit;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  word-break: break-all;
+}
+.chan-about__link:hover {
+  text-decoration: underline;
+}
