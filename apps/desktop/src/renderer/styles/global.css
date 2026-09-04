@@ -306,7 +306,9 @@ button {
     animation-duration: 0.001ms;
     animation-iteration-count: 1;
   }
-  * {
+  *,
+  *::before,
+  *::after {
     transition-duration: 0.05ms !important;
   }
 }

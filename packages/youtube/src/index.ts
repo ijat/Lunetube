@@ -19,7 +19,7 @@ export { identityRewriter } from './contract.js';
 export { InnertubeYouTubeSource } from './innertube/source.js';
 export type { InnertubeYouTubeSourceOptions } from './innertube/source.js';
 
-export { CLIENT_LADDER, attemptableClients, ladderSkipReason } from './innertube/clients.js';
+export { CLIENT_LADDER, ladderSkipReason } from './innertube/clients.js';
 export type {
   ClientCapabilities,
   ClientLadderEntry,

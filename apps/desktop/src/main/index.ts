@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, session } from 'electron';
+import { app, BrowserWindow, dialog, session } from 'electron';
 import { installSessionSecurity } from './security.js';
 import { APP_ORIGIN, registerAppProtocolScheme, serveRenderer } from './appProtocol.js';
 import { createMainWindow, getMainWindow } from './windows/mainWindow.js';
@@ -38,31 +38,45 @@ if (!app.requestSingleInstanceLock()) {
     }
   });
 
-  app.whenReady().then(async () => {
-    installSessionSecurity(session.defaultSession, { isDev });
-    if (!isDev) serveRenderer(join(__dirname, '../renderer'));
-
-    // The media proxy must be up before the container so the YouTube adapter
-    // can be handed rewriters that point at it. `close()` is idempotent.
-    const rendererOrigin = isDev ? new URL(devUrl!).origin : APP_ORIGIN;
-    const proxy = await startProxy({
-      allowedOrigin: rendererOrigin,
-      cacheDir: join(app.getPath('userData'), 'thumbs'),
-      imageCacheBytes: Math.round(getSettings().thumbnailCacheMb * 1024 * 1024),
-    });
-    app.on('before-quit', () => {
-      void proxy.close();
-    });
-
-    initContainer({ proxy });
-    registerAppIpc();
-    registerYoutubeIpc();
-    spawnWindow();
-
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) spawnWindow();
-    });
+  // Registered before the async startup work below — it does not depend on the
+  // proxy, and it is the macOS dock-click recovery path.
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) spawnWindow();
   });
+
+  app
+    .whenReady()
+    .then(async () => {
+      installSessionSecurity(session.defaultSession, { isDev });
+      if (!isDev) serveRenderer(join(__dirname, '../renderer'));
+
+      // The media proxy must be up before the container so the YouTube adapter
+      // can be handed rewriters that point at it. `close()` is idempotent.
+      const rendererOrigin = isDev ? new URL(devUrl!).origin : APP_ORIGIN;
+      const proxy = await startProxy({
+        allowedOrigin: rendererOrigin,
+        cacheDir: join(app.getPath('userData'), 'thumbs'),
+        imageCacheBytes: Math.round(getSettings().thumbnailCacheMb * 1024 * 1024),
+      });
+      app.on('before-quit', () => {
+        void proxy.close();
+      });
+
+      initContainer({ proxy });
+      registerAppIpc();
+      registerYoutubeIpc();
+      spawnWindow();
+    })
+    .catch((cause: unknown) => {
+      // A failed loopback bind (a locked-down host, an EDR product refusing
+      // 127.0.0.1:0, an exhausted ephemeral range) would otherwise leave a
+      // running process with no window and no IPC — silent and undiagnosable.
+      dialog.showErrorBox(
+        'LuneTube failed to start',
+        cause instanceof Error ? cause.message : String(cause),
+      );
+      app.exit(1);
+    });
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

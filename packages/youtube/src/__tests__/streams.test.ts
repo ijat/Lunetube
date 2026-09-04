@@ -100,6 +100,16 @@ describe('adaptive format mapping (video-normal fixture)', () => {
     });
     expect(boards[2]?.intervalMs).toBe(2000);
   });
+
+  it('keeps a raw templateUrl with placeholders intact alongside the rewritten url (A11)', () => {
+    const boards = mapStoryboards(fixture.storyboards, REWRITERS.image);
+    expect(boards[1]?.templateUrl).toBe(
+      'https://i.ytimg.com/sb/LXb3EKWsInQ/storyboard3_L1/$M.jpg?sqp=x',
+    );
+    // the rewritten `url` buries that string inside `?u=`
+    expect(boards[1]?.url).toContain('/tok/img?u=');
+    expect(boards[1]?.url).not.toContain('$M');
+  });
 });
 
 describe('degradation', () => {

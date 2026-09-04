@@ -46,6 +46,12 @@ test('watch route: fixture title, click-to-play poster, no console errors, no mo
     await expect(page.getByTestId('player-surface')).toHaveCount(0);
 
     // No element in the watch route may compute to a monospace family.
+    // KNOWN GAP (F11): the player is click-to-play, so `player-surface` has
+    // count 0 here and this walk never inspects the control bar — the `.ctl
+    // .time` / `.ctl .pill` / `.timeline .bubble .t` elements F5 conflict 1
+    // actually names. They are covered structurally (no `--font-mono` token
+    // exists; `player.css` uses `var(--font-body)` + `tabular-nums`). Phase 4
+    // mounts the player in e2e and closes this gap for real.
     const monoOffenders = await page.evaluate(() => {
       const MONO = /mono|menlo|consolas|courier|ui-monospace/i;
       const root = document.querySelector('.watch');

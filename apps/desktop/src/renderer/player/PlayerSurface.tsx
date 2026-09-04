@@ -30,6 +30,12 @@ export interface PlayerSurfaceProps {
   /** Need not be referentially stable — see the `stablePrefs` memo below. */
   prefs?: StreamPrefs;
   poster?: string;
+  /**
+   * Where the *initial* load should start, in seconds. P1-6 passes this when a
+   * description timestamp was clicked from the poster state, before the engine
+   * existed (F6). Ignored once playback has begun.
+   */
+  startTime?: number;
   /** P1-6 uses this to drive description/comment timestamp seeking. */
   onEngineReady?: (engine: PlaybackEngine | null) => void;
 }
@@ -46,12 +52,21 @@ export interface PlayerSurfaceProps {
  * into the same cache entry `useStreams` observes, so the UI and the engine can
  * never end up on different manifests.
  */
-export function PlayerSurface({ videoId, prefs, poster, onEngineReady }: PlayerSurfaceProps) {
+export function PlayerSurface({
+  videoId,
+  prefs,
+  poster,
+  startTime,
+  onEngineReady,
+}: PlayerSurfaceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const engineRef = useRef<PlaybackEngine | null>(null);
   const loadedManifestRef = useRef<StreamManifest | null>(null);
   const loadedVideoIdRef = useRef<string | null>(null);
+  // Captured once: the initial start time only applies to the first load of
+  // this mount; a later background refetch resumes from the element instead.
+  const startTimeRef = useRef(startTime);
 
   const queryClient = useQueryClient();
 
@@ -144,7 +159,9 @@ export function PlayerSurface({ videoId, prefs, poster, onEngineReady }: PlayerS
     // Same video, a newer manifest (a background refetch): resume where we are
     // rather than restarting. Different video: start from the top.
     const sameVideo = loadedVideoIdRef.current === videoId;
-    const resumeAt = sameVideo ? (videoRef.current?.currentTime ?? 0) : 0;
+    const resumeAt = sameVideo ? (videoRef.current?.currentTime ?? 0) : (startTimeRef.current ?? 0);
+    // Consume it: a re-resolve or a manifest refetch must not jump back here.
+    startTimeRef.current = undefined;
 
     loadedManifestRef.current = manifest;
     loadedVideoIdRef.current = videoId;
@@ -283,6 +300,12 @@ export function describeOverlay(input: OverlayInput): { text: string; canRetry: 
   }
   if (input.hasError) {
     return { text: input.errorMessage ?? 'Could not load this stream.', canRetry: true };
+  }
+  if (input.status === 'error') {
+    // `yt:streams` succeeded but shaka failed fatally (an unplayable codec, a
+    // manifest it rejected, an MSE failure). Without this branch the video
+    // freezes with no message and no way to retry.
+    return { text: 'This video could not be played.', canRetry: true };
   }
   if (input.status === 'recovering') {
     return { text: 'Renewing stream…', canRetry: false };

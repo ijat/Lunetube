@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import shaka from 'shaka-player';
-import { SHAKA_ERROR_CODE, SHAKA_REQUEST_TYPE_SEGMENT } from '../PlaybackEngine.js';
+import {
+  SHAKA_ERROR_CODE,
+  SHAKA_ERROR_SEVERITY,
+  SHAKA_REQUEST_TYPE_SEGMENT,
+} from '../PlaybackEngine.js';
 import { assertShakaConstants } from '../shakaPlayer.js';
 
 /**
@@ -32,6 +36,8 @@ describe('shaka-player interop', () => {
     expect(shaka.util.Error.Code.BAD_HTTP_STATUS).toBe(SHAKA_ERROR_CODE.BAD_HTTP_STATUS);
     expect(shaka.util.Error.Code.HTTP_ERROR).toBe(SHAKA_ERROR_CODE.HTTP_ERROR);
     expect(shaka.net.NetworkingEngine.RequestType.SEGMENT).toBe(SHAKA_REQUEST_TYPE_SEGMENT);
+    expect(shaka.util.Error.Severity.RECOVERABLE).toBe(SHAKA_ERROR_SEVERITY.RECOVERABLE);
+    expect(shaka.util.Error.Severity.CRITICAL).toBe(SHAKA_ERROR_SEVERITY.CRITICAL);
     expect(() => assertShakaConstants()).not.toThrow();
   });
 });

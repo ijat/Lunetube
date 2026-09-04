@@ -248,6 +248,17 @@ export class InnertubeYouTubeSource implements YouTubeSource {
     });
   }
 
+  /**
+   * KNOWN LIMITATION (F13, Phase 2 decision): `getWatchNextContinuation()`
+   * mutates and returns the *same* `VideoInfo` (`this.watch_next_feed` is
+   * replaced in place). We mint a new handle for it here while the previous
+   * handle still points at the same object — so every previously-issued related
+   * handle now resolves to the newest page. Pagination itself is correct (the
+   * feed is replaced, not accumulated), but a client holding an older handle (a
+   * back-nav, a retry) silently gets the wrong page. A proper fix — reuse the
+   * existing handle when object identity is unchanged — is deferred to Phase 2
+   * when `yt:related` paging actually ships.
+   */
   #pageFromWatchNext(info: unknown): Paged<VideoSummary> {
     const feed = (info as { watch_next_feed?: unknown }).watch_next_feed;
     const items = mapFeedVideos(feed as never, this.#rewriteImage);

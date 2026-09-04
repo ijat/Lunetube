@@ -18,8 +18,9 @@ import { loopbackImage } from '../../lib/img.js';
  * The ~1.1s cross-fade is the CSS `transition` on `.backdrop::before` /
  * `.backdrop::after` (`styles/global.css`); this component only writes the
  * custom properties. `prefers-reduced-motion` is honoured by global.css's
- * existing reduced-motion block, which collapses every transition — the colour
- * still updates, just instantly.
+ * reduced-motion block, whose `*, *::before, *::after { transition-duration }`
+ * rule collapses the pseudo-element cross-fade — the colour still updates, just
+ * instantly.
  *
  * Renders nothing.
  */
