@@ -15,6 +15,7 @@
     "@lunetube/shared": "workspace:*",
     "@lunetube/youtube": "workspace:*",
     "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-virtual": "^3.14.10",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "lucide-react": "^1.39.0",

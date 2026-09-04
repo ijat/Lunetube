@@ -1,0 +1,209 @@
+/* Card family — traced from docs/mockups.html `.vcard` in the Direction-B
+ * ("Cinema") variant: 300px minimum column, 28px/22px gutters, 16:9 thumb at
+ * --radius-card, hover lift + accent glow, 30px round avatar, 2-line display
+ * title, 11px tertiary meta line.
+ *
+ * ONE deliberate divergence from the mockup: its duration pill sets
+ * `font-family: var(--font-mono)`. PRD §7 is locked — there is no fixed-pitch
+ * family anywhere in this app, and both e2e specs walk the DOM asserting no
+ * computed font matches /mono/. Numerals get `var(--font-body)` plus the `.tnum`
+ * utility (font-variant-numeric: tabular-nums) instead, which is what the pill
+ * actually needed. Do not reintroduce a monospace family here. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-radius: var(--radius-card);
+}
+.card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+/* ---- thumbnail ---- */
+.card__thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: linear-gradient(145deg, #1d2d49, #0c1320);
+  border: 1px solid var(--stroke-soft);
+  transition:
+    transform 0.28s var(--ease),
+    box-shadow 0.28s var(--ease);
+}
+.card:hover .card__thumb,
+.card:focus-visible .card__thumb {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 60px -16px var(--glow);
+}
+.card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.card__sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(90% 60% at 30% 15%, rgb(255 255 255 / 0.12), transparent 60%);
+}
+
+/* ---- corner badge (duration / LIVE / item count) ---- */
+.card__badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  /* PRD §7: body font + tabular numerals, never a monospace face. */
+  font-family: var(--font-body);
+  font-size: 10px;
+  line-height: 1.4;
+  font-weight: var(--weight-medium);
+  background: rgb(0 0 0 / 0.82);
+  color: #fff;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.card__badge--live {
+  background: var(--err);
+  letter-spacing: 0.06em;
+  font-weight: var(--weight-semibold);
+}
+.card__badge--live::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+/* ---- body ---- */
+.card__body {
+  display: flex;
+  gap: var(--space-3);
+}
+.card__av {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex: none;
+  object-fit: cover;
+  background: linear-gradient(135deg, #3a4a66, #20283a);
+}
+.card__text {
+  min-width: 0;
+}
+.card__title {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  font-size: 15px;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.34;
+  color: var(--fg-1);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card__meta {
+  font-size: 11px;
+  color: var(--fg-3);
+  margin-top: var(--space-1);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.card__sep {
+  color: var(--fg-faint);
+}
+
+/* ---- channel card ---- */
+.card--channel {
+  align-items: center;
+  text-align: center;
+  padding: var(--space-4) var(--space-3);
+}
+.card__av--lg {
+  width: 88px;
+  height: 88px;
+  transition:
+    transform 0.28s var(--ease),
+    box-shadow 0.28s var(--ease);
+}
+.card--channel:hover .card__av--lg,
+.card--channel:focus-visible .card__av--lg {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 60px -16px var(--glow);
+}
+.card--channel .card__title {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+.card--channel .card__meta {
+  justify-content: center;
+}
+.card__verified {
+  color: var(--fg-3);
+  vertical-align: -2px;
+}
+
+/* ---- playlist card ---- */
+/* The stacked-corner look: two shrinking slivers peeking above the thumb. */
+.card__stack {
+  position: relative;
+}
+.card__stack::before,
+.card__stack::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: var(--surface-2);
+  border: 1px solid var(--stroke-soft);
+  border-bottom: 0;
+  pointer-events: none;
+}
+.card__stack::before {
+  top: -8px;
+  width: calc(100% - 28px);
+  height: 8px;
+  opacity: 0.55;
+}
+.card__stack::after {
+  top: -4px;
+  width: calc(100% - 14px);
+  height: 4px;
+  opacity: 0.8;
+}
+.card--playlist {
+  margin-top: 8px;
+}
+
+/* ---- skeleton ---- */
+.card-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.card-skeleton__thumb {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border-radius: var(--radius-card);
+}
+.card-skeleton__body {
+  display: flex;
+  gap: var(--space-3);
+}
+.card-skeleton__lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
