@@ -1,0 +1,157 @@
+/* Playlist route (plan P2-9). Content surface, not chrome (ARCHITECTURE.md
+ * "Window materials / glass"): the header is one `.glass-panel` blur layer;
+ * rows are plain (no glass, no blur budget spent on 200 list rows). The
+ * playlist title is large Bricolage display type, so it resets the glass
+ * text shadow via the shared `.display` utility. No "Play all" — it needs
+ * the Phase-3 queue. */
+
+/* ---- header ---- */
+.playlist-head {
+  display: flex;
+  gap: var(--space-5);
+  align-items: flex-start;
+  padding: var(--space-5);
+  border-radius: var(--radius-panel);
+  margin-bottom: var(--space-6);
+}
+.playlist-head__thumb {
+  width: 220px;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  flex: none;
+  background: linear-gradient(145deg, #1d2d49, #0c1320);
+  border: 1px solid var(--stroke-soft);
+}
+.playlist-head__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.playlist-head__text {
+  min-width: 0;
+}
+.playlist-head__title {
+  font-size: var(--text-xl);
+  text-wrap: balance;
+  margin: var(--space-1) 0 0;
+}
+.playlist-head__meta {
+  margin-top: var(--space-2);
+  font-size: 11.5px;
+  color: var(--fg-3);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.playlist-head__author {
+  color: var(--fg-2);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+.playlist-head__author:hover {
+  text-decoration: underline;
+}
+
+/* ---- rows ---- */
+.playlist-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2);
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+a.playlist-row:hover,
+a.playlist-row:focus-visible {
+  background: var(--glass-1);
+}
+.playlist-row__index {
+  width: 22px;
+  flex: none;
+  text-align: right;
+  color: var(--fg-3);
+  font-size: 12px;
+}
+.playlist-row__thumb {
+  position: relative;
+  width: 140px;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex: none;
+  background: linear-gradient(145deg, #1d2d49, #0c1320);
+  border: 1px solid var(--stroke-soft);
+}
+.playlist-row__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.playlist-row__badge {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  line-height: 1.4;
+  font-weight: var(--weight-medium);
+  background: rgb(0 0 0 / 0.82);
+  color: #fff;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.playlist-row__badge--live {
+  background: var(--err);
+  letter-spacing: 0.06em;
+  font-weight: var(--weight-semibold);
+}
+.playlist-row__text {
+  min-width: 0;
+  flex: 1;
+}
+.playlist-row__title {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  font-size: 13.5px;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.34;
+  color: var(--fg-1);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.playlist-row__meta {
+  font-size: 11px;
+  color: var(--fg-3);
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* ---- loading skeleton ---- */
+.playlist__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ---- more / continuation ---- */
+.playlist__more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-8) 0 var(--space-4);
+}
+.playlist__sentinel {
+  width: 100%;
+  height: 1px;
+}
