@@ -4,7 +4,12 @@ import type { PlaylistRef } from './playlist.js';
 
 /** youtubei.js exposes only RELEVANCE / POPULARITY (plan F2 + decision A3). */
 export type SearchSort = 'relevance' | 'views';
-export type SearchUploadDate = 'any' | 'hour' | 'today' | 'week' | 'month' | 'year';
+/**
+ * youtubei.js@18.0.0's `SearchFilter_Filters_UploadDate` enum has no `HOUR`
+ * (plan P2-F3 / A14) — a "Last hour" chip would silently return unfiltered
+ * results. `'any'` omits the filter key entirely.
+ */
+export type SearchUploadDate = 'any' | 'today' | 'week' | 'month' | 'year';
 export type SearchDuration = 'any' | 'short' | 'medium' | 'long';
 export type SearchResultType = 'all' | 'video' | 'channel' | 'playlist';
 

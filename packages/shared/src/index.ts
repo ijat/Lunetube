@@ -4,6 +4,7 @@ export * from './format.js';
 export * from './ipc.js';
 export * from './models/common.js';
 export * from './models/channel.js';
+export * from './models/channelPage.js';
 export * from './models/video.js';
 export * from './models/playlist.js';
 export * from './models/comment.js';

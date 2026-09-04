@@ -96,12 +96,8 @@ describe('yt:* IPC handlers (P1-4)', () => {
     expect(res.error.code).toBe('INVALID_INPUT');
   });
 
-  it('yt:related passes a string continuation through and omits it when absent', async () => {
+  it('yt:related forwards only { videoId } (A13 — single-page, no continuation)', async () => {
     await invoke('yt:related', { videoId: 'abc123', continuation: 'tok' });
-    expect(calls[0]!.params).toEqual({ videoId: 'abc123', continuation: 'tok' });
-
-    calls.length = 0;
-    await invoke('yt:related', { videoId: 'abc123' });
     expect(calls[0]!.params).toEqual({ videoId: 'abc123' });
   });
 

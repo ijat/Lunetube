@@ -10,8 +10,9 @@ import { defineHandler } from './registry.js';
  * renderer's TanStack Query `retry` predicate keys on.
  *
  * `validate` per channel narrows the untrusted renderer payload before it
- * reaches the adapter (decision A9): a non-empty `videoId`, a `prefs` object,
- * an optional string `continuation`.
+ * reaches the adapter (decision A9): a non-empty `videoId`, a `prefs` object.
+ * The Phase-2 `yt:*` channels (search / comments / channel / …) and their
+ * validators are wired in P2-6.
  */
 
 async function unwrap<T>(op: Promise<Result<T, LuneError>>): Promise<T> {
@@ -33,14 +34,6 @@ function requireVideoId(payload: unknown): string {
     throw makeLuneError('INVALID_INPUT', 'videoId must be a non-empty string');
   }
   return videoId;
-}
-
-function requireContinuation(payload: unknown): string | undefined {
-  const continuation = asRecord(payload)['continuation'];
-  if (continuation !== undefined && typeof continuation !== 'string') {
-    throw makeLuneError('INVALID_INPUT', 'continuation must be a string when present');
-  }
-  return continuation;
 }
 
 function requirePrefs(payload: unknown): StreamPrefs {
@@ -75,14 +68,12 @@ export function registerYoutubeIpc(): void {
     (payload) => ({ videoId: requireVideoId(payload), prefs: requirePrefs(payload) }),
   );
 
+  // A13: the up-next rail is single-page — `getWatchNextContinuation()` mutates
+  // `VideoInfo` in place, so no `continuation` is accepted here.
   defineHandler(
     'yt:related',
-    (params) => unwrap(youtubeSource().getRelated(params)),
-    (payload) => {
-      const videoId = requireVideoId(payload);
-      const continuation = requireContinuation(payload);
-      return continuation === undefined ? { videoId } : { videoId, continuation };
-    },
+    ({ videoId }) => unwrap(youtubeSource().getRelated({ videoId })),
+    (payload) => ({ videoId: requireVideoId(payload) }),
   );
 
   defineHandler('yt:diagnostics', () => unwrap(youtubeSource().getDiagnostics()));
