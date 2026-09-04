@@ -1,0 +1,37 @@
+/* Virtualization primitives — see VirtualGrid.tsx for the invariants.
+ *
+ * Neither of these is a scroller: the app has exactly one (`.stage__content`,
+ * P2-F11). Do NOT add `overflow` here. */
+
+.vgrid,
+.vlist {
+  position: relative;
+  width: 100%;
+}
+
+/* Rows are positioned by the virtualizer via an inline `translateY`, so nothing
+ * here may set `top` / `transform`. */
+.vgrid__row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--vgrid-cols, 1), minmax(0, 1fr));
+  column-gap: var(--vgrid-gap-x, 0px);
+  /* The row gutter is padding rather than a margin so it is inside the border
+   * box `measureElement` reads — the measured size then matches
+   * `estimateRowHeight + gapY`. */
+  padding-bottom: var(--vgrid-gap-y, 0px);
+}
+
+.vgrid__cell {
+  min-width: 0;
+}
+
+.vlist__item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}

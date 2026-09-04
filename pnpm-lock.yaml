@@ -71,6 +71,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.102.8
         version: 5.102.8(react@19.2.8)
+      '@tanstack/react-virtual':
+        specifier: ^3.14.10
+        version: 3.14.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@types/react':
         specifier: ^19.2.0
         version: 19.2.18
@@ -964,6 +967,15 @@ packages:
     resolution: {integrity: sha512-TYBea4OuXWD7MhaSHq069TWbFe7rcwWN6kzT7JF0OKi1K6c1gTv2IzD6A6ExJsCMozdkqBWeuIUZmu4KQg0O5A==}
     peerDependencies:
       react: ^18 || ^19
+
+  '@tanstack/react-virtual@3.14.10':
+    resolution: {integrity: sha512-SRyoUbdFMRHuYXMijV5H4ZarQWpXkj3iANq8OFre+pybeVap8ZJjZ3Nz9bVjx4d8PfobVUQUdKyyyHYk3E+djw==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@tanstack/virtual-core@3.17.8':
+    resolution: {integrity: sha512-BfEvehNpOT75r5Ksc5xW6NZuXujTfb7nlSEyVu4XHG3gdxNg1KqXruWbDewXOUaUYIo4oRbSfkjIajz4MAT8tA==}
 
   '@tokenizer/token@0.3.0':
     resolution: {integrity: sha512-OvjF+z51L3ov0OyAU0duzsYuvO01PH7x4t6DJx+guahgTnBHkhJdG7soQeTSFLWN3efnHyibZ4Z8l2EuWwJN3A==}
@@ -2689,6 +2701,14 @@ snapshots:
     dependencies:
       '@tanstack/query-core': 5.102.8
       react: 19.2.8
+
+  '@tanstack/react-virtual@3.14.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@tanstack/virtual-core': 3.17.8
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+
+  '@tanstack/virtual-core@3.17.8': {}
 
   '@tokenizer/token@0.3.0': {}
 
