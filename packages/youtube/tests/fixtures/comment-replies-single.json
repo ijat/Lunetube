@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "note": "HAND-AUTHORED (plan A20). Reply page 1 of the *prepopulated* thread in comments-basic — the same single reply the thread already carries inline, which is what makes replaying the `replies-first:` handle a no-op for the reader. No `continuation`: the thread has exactly one reply."
+  },
+  "replies": [
+    {
+      "type": "CommentThread",
+      "comment": {
+        "comment_id": "UgxFixtureReplyPrepop0001",
+        "author": {
+          "id": "UC3333333333333333333333",
+          "name": "Fixture Viewer A",
+          "thumbnails": [
+            { "url": "https://yt3.ggpht.com/fixture-viewer-a.jpg", "width": 176, "height": 176 }
+          ]
+        },
+        "content": { "text": "Agreed, it carries the whole song." },
+        "like_count": "34",
+        "published_time": "10 months ago"
+      }
+    }
+  ]
+}

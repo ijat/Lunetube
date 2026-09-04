@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "note": "HAND-AUTHORED (plan A20). Reply page 2 — the end of the chain, so no `continuation`. Reached through a `replies-more:` handle; ids are disjoint from page 1's so a duplicated or skipped page is visible as a duplicate/missing id."
+  },
+  "replies": [
+    {
+      "type": "CommentThread",
+      "comment": {
+        "comment_id": "UgxFixtureReplyMany0p2a",
+        "author": {
+          "id": "UCcccccccccccccccccccccc",
+          "name": "Fixture Viewer J",
+          "thumbnails": []
+        },
+        "content": { "text": "Second page of replies." },
+        "like_count": "5",
+        "published_time": "7 months ago"
+      }
+    },
+    {
+      "type": "CommentThread",
+      "comment": {
+        "comment_id": "UgxFixtureReplyMany0p2b",
+        "author": {
+          "id": "UCddddddddddddddddddddddd",
+          "name": "Fixture Viewer K",
+          "thumbnails": []
+        },
+        "content": { "text": "Last one." },
+        "like_count": "1",
+        "published_time": "3 months ago"
+      }
+    }
+  ]
+}

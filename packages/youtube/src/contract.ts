@@ -10,10 +10,9 @@
  * one.
  *
  * Phase 1 implemented `getVideo`, `getStreams`, `getRelated` and
- * `getDiagnostics`. Phase 2 adds `search`, `getSearchSuggestions`,
+ * `getDiagnostics`. Phase 2 added `search`, `getSearchSuggestions`,
  * `getComments`, `getCommentReplies`, `getChannel`, `getPlaylist` and
- * `resolveUrl`; each source implementation returns a `NOT_IMPLEMENTED`
- * `LuneError` until its mapper lands.
+ * `resolveUrl`; every method is now implemented by both sources.
  */
 import type {
   AdapterDiagnostics,
@@ -111,7 +110,7 @@ export interface YouTubeSource {
   getRelated(params: GetRelatedParams): Promise<Result<Paged<VideoSummary>, LuneError>>;
   getDiagnostics(): Promise<Result<AdapterDiagnostics, LuneError>>;
 
-  // ---- Phase 2 (NOT_IMPLEMENTED until then) ----
+  // ---- Phase 2 ----
   search(params: SearchParams): Promise<Result<SearchPage, LuneError>>;
   getSearchSuggestions(params: { query: string }): Promise<Result<string[], LuneError>>;
   getComments(params: GetCommentsParams): Promise<Result<CommentPage, LuneError>>;

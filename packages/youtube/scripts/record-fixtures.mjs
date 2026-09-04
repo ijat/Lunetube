@@ -1,22 +1,33 @@
 /* eslint-disable no-restricted-imports -- dev-only fixture recorder legitimately needs youtubei.js */
 /**
  * Opt-in fixture recorder:
- * `pnpm fixtures:record [-- --kind video|search|suggestions|channel|playlist --query <q> --id <id>]`.
+ * `pnpm fixtures:record [-- --kind video|search|suggestions|channel|playlist|comments --query <q> --id <id>]`.
  *
  * `--kind video` (default) hits YouTube once with the IOS client and writes
  * redacted `video-*.json` fixtures. `--kind search` / `--kind suggestions` write
  * `search-recorded.json` / `suggestions-recorded.json` for a `--query` (default
  * `lofi`). `--kind channel` / `--kind playlist` write `channel-recorded.json`
  * (first page of the `videos` tab plus `getAbout()`) / `playlist-recorded.json`
- * for a `--id` (default a small public channel / playlist). Never run in CI
- * (GitHub IPs are bot-blocked — plan F2/R2) and never committed without
- * eyeballing the output for leaked tokens.
+ * for a `--id` (default a small public channel / playlist). `--kind comments`
+ * writes `comments-recorded.json` + `comment-replies-recorded.json` for a
+ * `--id` video. Never run in CI (GitHub IPs are bot-blocked — plan F2/R2) and
+ * never committed without eyeballing the output for leaked tokens.
  *
  * Redaction: every googlevideo / timedtext URL is replaced with a synthetic one
  * that keeps only `expire` and `itag`; every ytimg / ggpht / googleusercontent
  * URL is stripped to `origin + pathname` (drops tracking params); `visitor_data`,
  * cookies, `po_token`, `cpn`, `signatureCipher`, `actions`/`session`/`client`
  * back-references and client IP params never reach disk.
+ *
+ * **Comments carry third-party identity, so `--kind comments` redacts author
+ * identity by default (plan A20).** Every commenter's `name`, channel `id` and
+ * avatar is replaced with a per-recording pseudonym, and the comment body is
+ * dropped entirely — structure is all the tests need, and the committed fixtures
+ * are hand-authored anyway. `--include-authors` turns the redaction off; it
+ * exists only for local debugging of a specific real thread. **CI never passes
+ * it, and no committed fixture may be produced with it** — a recording made with
+ * it would put real users' names, channel ids and comment text into a public
+ * repo.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -368,12 +379,126 @@ async function recordPlaylist(playlistId) {
   console.log(`wrote ${path}`);
 }
 
+/**
+ * One commenter → a stable pseudonym for this recording. `includeAuthors` is
+ * the explicit opt-out; without it no real name, channel id or avatar and no
+ * comment body reaches disk (A20).
+ */
+function redactCommentAuthor(author, includeAuthors, pseudonyms) {
+  if (!author) return null;
+  if (includeAuthors) {
+    return { id: author.id, name: author.name, thumbnails: author.thumbnails ?? [] };
+  }
+  const real = String(author.id ?? author.name ?? '');
+  let alias = pseudonyms.get(real);
+  if (!alias) {
+    alias = `UC${String(pseudonyms.size).padStart(22, 'r')}`;
+    pseudonyms.set(real, alias);
+  }
+  return { id: alias, name: `Redacted Author ${pseudonyms.size}`, thumbnails: [] };
+}
+
+/** One `CommentView` → the subset the mappers read, author-redacted by default. */
+function redactCommentView(view, includeAuthors, pseudonyms) {
+  if (!view) return null;
+  return {
+    // A comment id is not personally identifying on its own, but it *resolves*
+    // to the comment; keep it only alongside real authors.
+    comment_id: includeAuthors ? view.comment_id : `UgxRedacted${pseudonyms.size}`,
+    author: redactCommentAuthor(view.author, includeAuthors, pseudonyms),
+    content: { text: includeAuthors ? text(view.content) : '[redacted comment text]' },
+    like_count: view.like_count,
+    published_time: view.published_time,
+    is_hearted: Boolean(view.is_hearted),
+    is_pinned: Boolean(view.is_pinned),
+    author_is_channel_owner: Boolean(view.author_is_channel_owner),
+    reply_count: view.reply_count,
+  };
+}
+
+/** One `CommentThread` → a fixture node. Replies are flattened one level. */
+function redactCommentThread(thread, includeAuthors, pseudonyms) {
+  const node = {
+    type: 'CommentThread',
+    rendering_priority: thread.rendering_priority,
+    has_replies: Boolean(thread.has_replies),
+    is_prepopulated: Boolean(thread.is_prepopulated),
+    comment: redactCommentView(thread.comment, includeAuthors, pseudonyms),
+  };
+  // `thread.replies` is only populated for a prepopulated thread (the `Comments`
+  // constructor's processRepliesData). `has_continuation` is NOT read here — it
+  // throws while replies are unloaded (plan P2-F6 #1).
+  if (Array.isArray(thread.replies)) {
+    node.replies = thread.replies.map((r) => redactCommentThread(r, includeAuthors, pseudonyms));
+  }
+  return node;
+}
+
+async function recordComments(videoId, includeAuthors) {
+  const yt = await Innertube.create({
+    cache: new UniversalCache(true, CACHE_DIR),
+    retrieve_player: false,
+  });
+  // Never `applySort` — it throws when the header or sort button is missing
+  // (plan P2-F6 #2). The sort is baked into the request token.
+  const comments = await yt.getComments(videoId, 'TOP_COMMENTS');
+  const pseudonyms = new Map();
+  const threads = (comments.contents ?? []).slice(0, 20);
+
+  const fixture = {
+    meta: {
+      videoId,
+      sort: 'top',
+      key: `${videoId}|top`,
+      recordedAt: new Date().toISOString(),
+      note: includeAuthors
+        ? 'Recorded with --include-authors — CONTAINS REAL AUTHOR IDENTITY AND COMMENT TEXT. Do NOT commit.'
+        : 'Recorded by scripts/record-fixtures.mjs --kind comments — author identity and comment text redacted (plan A20).',
+    },
+    header: {
+      count: { text: text(comments.header?.count) },
+      comments_count: { text: text(comments.header?.comments_count) },
+    },
+    contents: threads.map((t) => redactCommentThread(t, includeAuthors, pseudonyms)),
+  };
+  writeFileSync(`${FIXTURES_DIR}/comments-recorded.json`, `${JSON.stringify(fixture, null, 2)}\n`);
+  console.log(`wrote ${FIXTURES_DIR}/comments-recorded.json`);
+
+  // One reply page, from the first thread that has replies — the `replies-first`
+  // shape. `getReplies()` is idempotent, so re-running this is safe.
+  const withReplies = threads.find((t) => t.has_replies);
+  if (withReplies) {
+    await withReplies.getReplies();
+    const replyFixture = {
+      meta: {
+        recordedAt: new Date().toISOString(),
+        note: fixture.meta.note,
+      },
+      replies: (withReplies.replies ?? []).map((r) =>
+        redactCommentThread(r, includeAuthors, pseudonyms),
+      ),
+    };
+    writeFileSync(
+      `${FIXTURES_DIR}/comment-replies-recorded.json`,
+      `${JSON.stringify(replyFixture, null, 2)}\n`,
+    );
+    console.log(`wrote ${FIXTURES_DIR}/comment-replies-recorded.json`);
+  }
+
+  if (includeAuthors) {
+    console.warn(
+      '\n!! --include-authors was set: the fixtures above contain real names, channel ids and comment text. Do NOT commit them.',
+    );
+  }
+}
+
 function parseArgs(argv) {
-  const out = { kind: 'video', query: 'lofi', id: undefined };
+  const out = { kind: 'video', query: 'lofi', id: undefined, includeAuthors: false };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--kind') out.kind = argv[(i += 1)];
     else if (argv[i] === '--query') out.query = argv[(i += 1)];
     else if (argv[i] === '--id') out.id = argv[(i += 1)];
+    else if (argv[i] === '--include-authors') out.includeAuthors = true;
   }
   return out;
 }
@@ -388,6 +513,8 @@ if (args.kind === 'search') {
   await recordChannel(args.id ?? 'UCHnyfMqiRRG1u-2MsSQLbXA'); // Veritasium
 } else if (args.kind === 'playlist') {
   await recordPlaylist(args.id ?? 'PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb');
+} else if (args.kind === 'comments') {
+  await recordComments(args.id ?? 'dQw4w9WgXcQ', args.includeAuthors);
 } else {
   for (const target of TARGETS) {
     await record(target);

@@ -5,9 +5,9 @@
  * `youtubei.js`. Everything it returns is a plain `@lunetube/shared` DTO.
  *
  * Phase 1 scope: `getVideo`, `getStreams`, `getRelated`, `getDiagnostics`.
- * Phase 2 adds `search`, `getSearchSuggestions`, `resolveUrl` (P2-3) and
- * `getChannel`, `getPlaylist` (P2-4); the remaining two (`getComments`,
- * `getCommentReplies`) still return a `NOT_IMPLEMENTED` `LuneError`.
+ * Phase 2 adds `search`, `getSearchSuggestions`, `resolveUrl` (P2-3),
+ * `getChannel`, `getPlaylist` (P2-4) and `getComments` / `getCommentReplies`
+ * (P2-5) — the whole `YouTubeSource` contract is now implemented.
  *
  * `getStreams` owns **client selection** (walking `CLIENT_LADDER`) and
  * **recovery** (session refresh on a parser break); turning one `VideoInfo`
@@ -27,6 +27,7 @@ import {
   type ChannelTab,
   type Comment,
   type CommentPage,
+  type CommentSort,
   type LuneError,
   type NavTarget,
   type Paged,
@@ -55,12 +56,18 @@ import {
   type ClientCapabilities,
   type InnerTubeClient,
 } from './clients.js';
-import { mapPlayabilityStatus, mapYoutubeError, notImplemented } from './errors.js';
+import { mapPlayabilityStatus, mapYoutubeError } from './errors.js';
 import { InnertubeSession, youtubeiVersion, type InnertubeSessionOptions } from './session.js';
 import { mapFeedVideos, mapVideoDetail, type RawVideoInfo } from './map/video.js';
 import { mapSearchPage, toInnertubeFilters, type RawSearch } from './map/search.js';
 import { isValidChannelId, isValidPlaylistId, isValidVideoId, parseYouTubeUrl } from './map/url.js';
 import { mapAbout, mapChannelDetail, mapChannelTabContent } from './map/channel.js';
+import {
+  mapCommentThreads,
+  mapCommentsTotalText,
+  mapLoadedReplies,
+  type RawCommentsHeader,
+} from './map/comments.js';
 import { mapPlaylistDetail } from './map/playlist.js';
 import { textToString, type MaybeText } from './map/util.js';
 import { ContinuationStore } from './continuations.js';
@@ -111,7 +118,14 @@ export class InnertubeYouTubeSource implements YouTubeSource {
   readonly #rewriteCaption: (url: URL) => URL;
   readonly #ladder = new Map<InnerTubeClient, LadderState>();
   readonly #strategy: PlaybackStrategy;
-  /** Pagination state for the continuation-bearing Phase-2 feeds (search today). */
+  /**
+   * Pagination state for every continuation-bearing Phase-2 feed: `'search'`,
+   * `'channel'`, `'playlist'`, `'comments'`, and the two reply kinds
+   * `'replies-first'` / `'replies-more'`. The store is kind-namespaced and
+   * identity-deduped, which is what lets one `CommentThread` object carry two
+   * distinct handles — one per call it must be reached through — without either
+   * handle ever being able to trigger the other's call.
+   */
   readonly #continuations = new ContinuationStore();
   #lastClient: string | null = null;
   #lastExpiresAt: number | null = null;
@@ -329,14 +343,137 @@ export class InnertubeYouTubeSource implements YouTubeSource {
     return this.#guard(async (yt) => ok(dedupeSuggestions(await yt.getSearchSuggestions(query))));
   }
 
-  async getComments(_params: GetCommentsParams): Promise<Result<CommentPage, LuneError>> {
-    return err(notImplemented('getComments'));
+  /**
+   * First page: `yt.getComments(videoId, 'TOP_COMMENTS'|'NEWEST_FIRST')`.
+   *
+   * **`Comments.applySort` is never called** (P2-F6 #2): it throws whenever the
+   * header or the sort button is missing (`Comments.js:39-50`). The sort is
+   * baked into the protobuf continuation token at request time
+   * (`Innertube.js:224-244`), so every continuation *inherits* it and the handle
+   * needs no sort tag of its own — a `comments:` handle minted for a "newest"
+   * page keeps paging newest even though `params.sort` is not consulted again.
+   *
+   * Continuation: `Comments.getContinuation()` returns a **new** `Comments`
+   * (`Comments.js:73-85` — it copies the page so the header survives), so page 2
+   * is a fresh object and page 1's handle stays valid and unchanged.
+   */
+  async getComments(params: GetCommentsParams): Promise<Result<CommentPage, LuneError>> {
+    if (params.continuation !== undefined) {
+      const stored = this.#continuations.get('comments', params.continuation);
+      if (stored === undefined) {
+        return err(
+          makeLuneError('INVALID_INPUT', 'These comments refreshed. Reload to keep reading.', {
+            detail: 'continuation:comments',
+          }),
+        );
+      }
+      return this.#guard(async () => {
+        const next = await (stored as { getContinuation(): Promise<unknown> }).getContinuation();
+        return ok(this.#toCommentPage(next));
+      });
+    }
+
+    const videoId = normalizeId(params.videoId);
+    if (videoId == null) return err(invalidId());
+    const sortBy: InnertubeCommentSort = innertubeCommentSort(params.sort);
+    return this.#guard(async (yt) =>
+      ok(this.#toCommentPage(await yt.getComments(videoId, sortBy))),
+    );
   }
+
+  #toCommentPage(comments: unknown): CommentPage {
+    const raw = comments as { header?: RawCommentsHeader | null; contents?: unknown };
+    const page: CommentPage = {
+      header: { totalText: mapCommentsTotalText(raw.header) },
+      threads: mapCommentThreads(raw.contents, this.#rewriteImage, (thread) =>
+        this.#continuations.put('replies-first', thread),
+      ),
+    };
+    // `Comments.has_continuation` is a plain `!!this.#continuation` getter
+    // (`Comments.js:86-88`) — unlike `CommentThread`'s, it never throws.
+    if ((raw as { has_continuation?: unknown }).has_continuation === true) {
+      page.continuation = this.#continuations.put('comments', comments);
+    }
+    return page;
+  }
+
+  /**
+   * The reply three-state machine (A17). The handle's **kind prefix** selects the
+   * call, because reply page 1 and reply page 2 of the same thread are reached
+   * through two different methods on the same object:
+   *
+   *  - `replies-first:` → `CommentThread.getReplies()`. Returns `this`
+   *    (`CommentThread.js:65`) and is **replay-safe**: when the thread is
+   *    prepopulated it returns immediately with the replies the `Comments`
+   *    constructor already attached (no network at all); otherwise it refetches
+   *    the *same* page-1 endpoint and `#processList` reassigns
+   *    `this.replies = observe([])` from scratch (`CommentThread.js:97-111`).
+   *    Either way a second call yields the same page — which is the property the
+   *    whole design rests on, since a retry, a back-nav or a StrictMode
+   *    double-invoke must not advance the cursor.
+   *  - `replies-more:` → `getContinuation()`. On a `CommentThread` this returns a
+   *    **new** `CommentsContinuation` without mutating `this`
+   *    (`CommentThread.js:70-82`); on a `CommentsContinuation` it returns another
+   *    new `CommentsContinuation` (`CommentsContinuation.js:38-46`). So the
+   *    `replies-more:` branch is uniform over both, and each page is a distinct
+   *    object with its own handle.
+   *  - anything else (a `comments:` handle, a `search:` handle, junk) →
+   *    `INVALID_INPUT`. The store's kind check would reject it anyway; the
+   *    explicit prefix dispatch is what makes *which call to make* unambiguous.
+   */
   async getCommentReplies(
-    _params: GetCommentRepliesParams,
+    params: GetCommentRepliesParams,
   ): Promise<Result<Paged<Comment>, LuneError>> {
-    return err(notImplemented('getCommentReplies'));
+    const handle = typeof params.handle === 'string' ? params.handle : '';
+
+    if (handle.startsWith('replies-first:')) {
+      const stored = this.#continuations.get('replies-first', handle);
+      if (stored === undefined) return err(staleReplies('replies-first'));
+      return this.#guard(async () => {
+        const returned = await (stored as { getReplies(): Promise<unknown> }).getReplies();
+        // v18.0.0 returns `this`; prefer whatever it hands back anyway so a
+        // future version that returns a fresh object cannot leave us mapping a
+        // stale one.
+        return ok(this.#repliesPage(returned ?? stored));
+      });
+    }
+
+    if (handle.startsWith('replies-more:')) {
+      const stored = this.#continuations.get('replies-more', handle);
+      if (stored === undefined) return err(staleReplies('replies-more'));
+      return this.#guard(async () => {
+        const next = await (stored as { getContinuation(): Promise<unknown> }).getContinuation();
+        return ok(this.#repliesPage(next));
+      });
+    }
+
+    return err(
+      makeLuneError('INVALID_INPUT', 'Not a comment-replies handle.', {
+        detail: 'continuation:replies-kind',
+        hint: REPLIES_HINT,
+      }),
+    );
   }
+
+  /**
+   * A loaded reply page (`CommentThread` after `getReplies()`, or a
+   * `CommentsContinuation`) → `Paged<Comment>`.
+   *
+   * This is the **only** place `has_continuation` is read for a `CommentThread`,
+   * and it is reached only after that thread's `getReplies()` has resolved. It is
+   * still guarded: `getReplies()` returns without assigning `this.replies` when
+   * the response carries no `AppendContinuationItemsAction`
+   * (`CommentThread.js:61-63`), and the getter throws in exactly that case
+   * (`CommentThread.js:31-35`). "Replies never loaded" means "no page we could
+   * reach" — `getContinuation()` refuses for the same reason — so it degrades to
+   * a final page rather than an error.
+   */
+  #repliesPage(node: unknown): Paged<Comment> {
+    const page: Paged<Comment> = { items: mapLoadedReplies(node, this.#rewriteImage) };
+    if (hasMoreReplies(node)) page.continuation = this.#continuations.put('replies-more', node);
+    return page;
+  }
+
   /**
    * First page: `@handle` channel ids are resolved to a browse id via
    * `yt.resolveURL` first (P2-F8 — `Innertube.getChannel` only accepts a
@@ -600,6 +737,41 @@ const TAB_GETTER: Record<Exclude<ChannelTab, 'about'>, string> = {
   live: 'getLiveStreams',
   podcasts: 'getPodcasts',
 };
+
+/** youtubei.js' own sort argument for `Innertube.getComments` (`Innertube.js:220-223`). */
+type InnertubeCommentSort = 'TOP_COMMENTS' | 'NEWEST_FIRST';
+
+function innertubeCommentSort(sort: CommentSort): InnertubeCommentSort {
+  return sort === 'newest' ? 'NEWEST_FIRST' : 'TOP_COMMENTS';
+}
+
+const REPLIES_HINT = 'Reload the comments to keep reading this thread.';
+
+/** A handle that no longer resolves — expired TTL, LRU-evicted, or never minted. */
+function staleReplies(kind: 'replies-first' | 'replies-more'): LuneError {
+  return makeLuneError('INVALID_INPUT', 'This comment thread refreshed.', {
+    detail: `continuation:${kind}`,
+    hint: REPLIES_HINT,
+  });
+}
+
+/**
+ * `has_continuation` on a **loaded** reply page.
+ *
+ * `CommentsContinuation.has_continuation` is a safe `!!` getter
+ * (`CommentsContinuation.js:32-34`). `CommentThread.has_continuation` throws
+ * unless `this.replies` was assigned (`CommentThread.js:31-35`), which
+ * `getReplies()` does not guarantee — see `#repliesPage`. Callers must have run
+ * the page-1 fetch first; the try/catch covers the residual case and reports "no
+ * further page", never an error.
+ */
+function hasMoreReplies(node: unknown): boolean {
+  try {
+    return (node as { has_continuation?: unknown } | null)?.has_continuation === true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * `Playlist`'s constructor throws this exact message on the last page

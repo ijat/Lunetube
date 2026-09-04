@@ -42,7 +42,7 @@ import {
   type YouTubeSource,
 } from '../contract.js';
 import { CLIENT_LADDER, ladderSkipReason } from '../innertube/clients.js';
-import { mapPlayabilityStatus, notImplemented } from '../innertube/errors.js';
+import { mapPlayabilityStatus } from '../innertube/errors.js';
 import { mapFeedVideos, mapVideoDetail } from '../innertube/map/video.js';
 import { mapSearchPage, type RawSearch } from '../innertube/map/search.js';
 import {
@@ -51,6 +51,12 @@ import {
   mapChannelTabContent,
   type RawChannel,
 } from '../innertube/map/channel.js';
+import {
+  mapCommentThreads,
+  mapCommentsTotalText,
+  mapReplyComments,
+  type RawCommentsHeader,
+} from '../innertube/map/comments.js';
 import { mapPlaylistDetail, type RawPlaylistInfo } from '../innertube/map/playlist.js';
 import { parseYouTubeUrl } from '../innertube/map/url.js';
 import { textToString, type MaybeText } from '../innertube/map/util.js';
@@ -131,6 +137,39 @@ interface PlaylistFixture {
   videos?: unknown[];
 }
 
+/**
+ * A `comments-*.json` fixture: one (videoId, sort) page, hand-authored (A20).
+ *
+ * A thread node may carry a fake-only `replies_fixture` key naming the
+ * `comment-replies-*` fixture its `replies-first:` handle resolves to. The real
+ * adapter mints a store handle there instead; both produce the same
+ * `replies-first:…` grammar, which is what lets the renderer treat the two
+ * sources interchangeably.
+ */
+interface CommentsFixture {
+  meta?: {
+    videoId?: string;
+    sort?: string;
+    /** Full composite key `videoId|sort` for an exact match. */
+    key?: string;
+    /** Stem of the next `comments-*.json` fixture — served as the opaque continuation. */
+    continuation?: string;
+    note?: string;
+  };
+  header?: RawCommentsHeader | null;
+  contents?: unknown[];
+}
+
+/** A `comment-replies-*.json` fixture: one page of replies to a single thread. */
+interface ReplyFixture {
+  meta?: {
+    /** Stem of the next `comment-replies-*.json` fixture. */
+    continuation?: string;
+    note?: string;
+  };
+  replies?: unknown[];
+}
+
 export interface FakeYouTubeSourceOptions {
   /** Directory of `video-*.json` fixtures. Defaults to the package's own. */
   fixturesDir?: string;
@@ -144,6 +183,8 @@ export class FakeYouTubeSource implements YouTubeSource {
   readonly #suggestionFixtures: Map<string, SuggestionsFixture>;
   readonly #channelFixtures: Map<string, ChannelFixture>;
   readonly #playlistFixtures: Map<string, PlaylistFixture>;
+  readonly #commentFixtures: Map<string, CommentsFixture>;
+  readonly #replyFixtures: Map<string, ReplyFixture>;
   readonly #media: UrlRewriter;
   readonly #image: UrlRewriter;
   readonly #caption: UrlRewriter;
@@ -158,6 +199,10 @@ export class FakeYouTubeSource implements YouTubeSource {
     this.#suggestionFixtures = loadFixturesByPrefix<SuggestionsFixture>('suggestions-', dir);
     this.#channelFixtures = loadFixturesByPrefix<ChannelFixture>('channel-', dir);
     this.#playlistFixtures = loadFixturesByPrefix<PlaylistFixture>('playlist-', dir);
+    // `comments-` and `comment-replies-` are disjoint prefixes, so the two maps
+    // never overlap even though both start with `comment`.
+    this.#commentFixtures = loadFixturesByPrefix<CommentsFixture>('comments-', dir);
+    this.#replyFixtures = loadFixturesByPrefix<ReplyFixture>('comment-replies-', dir);
     this.#media = opts.rewriters?.media ?? identityRewriter;
     this.#image = opts.rewriters?.image ?? identityRewriter;
     this.#caption = opts.rewriters?.caption ?? identityRewriter;
@@ -299,14 +344,86 @@ export class FakeYouTubeSource implements YouTubeSource {
     return ok(list.filter((s) => typeof s === 'string' && s.trim().length > 0).slice(0, 12));
   }
 
-  async getComments(_params: GetCommentsParams): Promise<Result<CommentPage, LuneError>> {
-    return err(notImplemented('getComments'));
+  async getComments(params: GetCommentsParams): Promise<Result<CommentPage, LuneError>> {
+    if (params.continuation !== undefined) {
+      const fx = this.#commentFixtures.get(params.continuation);
+      if (fx == null) {
+        return err(
+          makeLuneError('INVALID_INPUT', 'These comments refreshed. Reload to keep reading.', {
+            detail: 'continuation:comments',
+          }),
+        );
+      }
+      return ok(this.#commentPage(fx));
+    }
+
+    const key = `${params.videoId}|${params.sort}`;
+    const values = [...this.#commentFixtures.values()];
+    const fx =
+      values.find((x) => x.meta?.key === key) ??
+      values.find((x) => x.meta?.videoId === params.videoId && x.meta?.sort === params.sort);
+    if (fx == null) {
+      return err(
+        makeLuneError(
+          'YT_UNAVAILABLE',
+          `No comments fixture for "${params.videoId}" sorted by "${params.sort}".`,
+          { detail: 'fake', hint: 'Add packages/youtube/tests/fixtures/comments-*.json' },
+        ),
+      );
+    }
+    return ok(this.#commentPage(fx));
   }
+
+  #commentPage(fx: CommentsFixture): CommentPage {
+    const page: CommentPage = {
+      header: { totalText: mapCommentsTotalText(fx.header) },
+      threads: mapCommentThreads(fx.contents, this.#image, repliesHandleFromFixture),
+    };
+    const next = fx.meta?.continuation;
+    if (typeof next === 'string' && next.length > 0) page.continuation = next;
+    return page;
+  }
+
+  /**
+   * Both reply kinds resolve to the same fixture table here — the fake has no
+   * live objects and therefore no two-calls-on-one-object problem to reproduce.
+   * What it *does* reproduce faithfully is the handle grammar and its rejection
+   * surface: the kind prefix is required, a `comments:` (or any other) handle is
+   * `INVALID_INPUT`, and replaying a `replies-first:` handle returns the same
+   * page — which for a pure fixture lookup is true by construction.
+   */
   async getCommentReplies(
-    _params: GetCommentRepliesParams,
+    params: GetCommentRepliesParams,
   ): Promise<Result<Paged<Comment>, LuneError>> {
-    return err(notImplemented('getCommentReplies'));
+    const handle = typeof params.handle === 'string' ? params.handle : '';
+    for (const prefix of REPLY_HANDLE_PREFIXES) {
+      if (!handle.startsWith(prefix)) continue;
+      const fx = this.#replyFixtures.get(handle.slice(prefix.length));
+      if (fx == null) {
+        return err(
+          makeLuneError('INVALID_INPUT', 'This comment thread refreshed.', {
+            detail: `continuation:${prefix.slice(0, -1)}`,
+            hint: FAKE_REPLIES_HINT,
+          }),
+        );
+      }
+      return ok(this.#repliesPage(fx));
+    }
+    return err(
+      makeLuneError('INVALID_INPUT', 'Not a comment-replies handle.', {
+        detail: 'continuation:replies-kind',
+        hint: FAKE_REPLIES_HINT,
+      }),
+    );
   }
+
+  #repliesPage(fx: ReplyFixture): Paged<Comment> {
+    const page: Paged<Comment> = { items: mapReplyComments(fx.replies, this.#image) };
+    const next = fx.meta?.continuation;
+    if (typeof next === 'string' && next.length > 0) page.continuation = `replies-more:${next}`;
+    return page;
+  }
+
   async getChannel(params: GetChannelParams): Promise<Result<ChannelPage, LuneError>> {
     if (params.continuation !== undefined) {
       const fx = this.#channelFixtures.get(params.continuation);
@@ -413,6 +530,21 @@ export class FakeYouTubeSource implements YouTubeSource {
     // than invent an id.
     return ok(local ?? { kind: 'unknown', url: raw });
   }
+}
+
+/** The two reply handle kinds, longest-unambiguous prefixes (plan A17). */
+const REPLY_HANDLE_PREFIXES = ['replies-first:', 'replies-more:'] as const;
+
+const FAKE_REPLIES_HINT = 'Reload the comments to keep reading this thread.';
+
+/**
+ * The fake's `replies-first:` minter: a thread node's fixture-only
+ * `replies_fixture` stem, or `undefined` when the fixture wires none (a thread
+ * whose replies are entirely inline).
+ */
+function repliesHandleFromFixture(thread: unknown): string | undefined {
+  const stem = (thread as { replies_fixture?: unknown } | null)?.replies_fixture;
+  return typeof stem === 'string' && stem.length > 0 ? `replies-first:${stem}` : undefined;
 }
 
 /**
