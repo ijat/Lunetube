@@ -95,9 +95,9 @@
   --glass-material-solid-opacity: 0.45;
   --accent: rgb(113 176 247 / 1);
   --accent-rgb: 113 176 247;
-  --glow: rgb(113 176 247 / 0.32);
-  --wash-a: rgb(113 176 247 / 0.20);
-  --wash-b: rgb(113 176 247 / 0.13);
+  --glow: rgb(113 176 247 / 0.3);
+  --wash-a: rgb(113 176 247 / 0.12);
+  --wash-b: rgb(113 176 247 / 0.08);
   --glass-tint-rgb: 10 18 31;
   --glass-opacity-option: 0.85;
 }
@@ -197,9 +197,9 @@
   --glass-material-solid-opacity: 0.45;
   --accent: rgb(163 113 247 / 1);
   --accent-rgb: 163 113 247;
-  --glow: rgb(163 113 247 / 0.32);
-  --wash-a: rgb(163 113 247 / 0.20);
-  --wash-b: rgb(163 113 247 / 0.13);
+  --glow: rgb(163 113 247 / 0.3);
+  --wash-a: rgb(163 113 247 / 0.12);
+  --wash-b: rgb(163 113 247 / 0.08);
   --glass-tint-rgb: 20 10 31;
   --glass-opacity-option: 0.85;
 }
@@ -299,9 +299,9 @@
   --glass-material-solid-opacity: 0.45;
   --accent: rgb(113 247 146 / 1);
   --accent-rgb: 113 247 146;
-  --glow: rgb(113 247 146 / 0.32);
-  --wash-a: rgb(113 247 146 / 0.20);
-  --wash-b: rgb(113 247 146 / 0.13);
+  --glow: rgb(113 247 146 / 0.3);
+  --wash-a: rgb(113 247 146 / 0.12);
+  --wash-b: rgb(113 247 146 / 0.08);
   --glass-tint-rgb: 10 31 17;
   --glass-opacity-option: 0.85;
 }
@@ -401,9 +401,9 @@
   --glass-material-solid-opacity: 0.45;
   --accent: rgb(217 119 87 / 1);
   --accent-rgb: 217 119 87;
-  --glow: rgb(217 119 87 / 0.32);
-  --wash-a: rgb(217 119 87 / 0.20);
-  --wash-b: rgb(217 119 87 / 0.13);
+  --glow: rgb(217 119 87 / 0.3);
+  --wash-a: rgb(217 119 87 / 0.12);
+  --wash-b: rgb(217 119 87 / 0.08);
   --glass-tint-rgb: 26 14 8;
   --glass-opacity-option: 0.85;
 }
@@ -521,9 +521,9 @@
   --glass-material-solid-opacity: 0.6;
   --accent: rgb(0 120 212 / 1);
   --accent-rgb: 0 120 212;
-  --glow: rgb(0 120 212 / 0.32);
-  --wash-a: rgb(0 120 212 / 0.20);
-  --wash-b: rgb(0 120 212 / 0.13);
+  --glow: rgb(0 120 212 / 0.3);
+  --wash-a: rgb(0 120 212 / 0.12);
+  --wash-b: rgb(0 120 212 / 0.08);
   --glass-tint-rgb: 31 31 31;
   --glass-opacity-option: 0.98;
 }

@@ -93,6 +93,30 @@ describe('glass material opacity (decision A4, lowered for real-glass)', () => {
   });
 });
 
+describe('real-glass design-system pass (step P2-G / decision A21)', () => {
+  it('exposes a --text-shadow-glass token for small chrome text over the OS material', () => {
+    const glass = read('tokens/glass.css');
+    expect(glass).toMatch(/--text-shadow-glass:\s*0 1px 2px rgb\(0 0 0 \/ 0\.35\)\s*;/);
+  });
+
+  it('resets the glass shadow to none on large display type', () => {
+    expect(read('tokens/typography.css')).toMatch(/\.display\s*\{[^}]*text-shadow:\s*none/);
+  });
+
+  it('lowers the backdrop wash alphas so they sit on vibrancy instead of an opaque window', () => {
+    // Per-theme defaults (generated) — halved from 0.20 / 0.13, glow kept near 0.30.
+    expect(generatedThemes).toMatch(/--wash-a: rgb\(\d+ \d+ \d+ \/ 0\.12\);/);
+    expect(generatedThemes).toMatch(/--wash-b: rgb\(\d+ \d+ \d+ \/ 0\.08\);/);
+    expect(generatedThemes).toMatch(/--glow: rgb\(\d+ \d+ \d+ \/ 0\.3\);/);
+    expect(generatedThemes).not.toMatch(/--wash-a: rgb\(\d+ \d+ \d+ \/ 0\.20?\);/);
+    // Literal fallbacks in base.css match.
+    const base = read('tokens/base.css');
+    expect(base).toMatch(/--wash-a: rgb\(113 176 247 \/ 0\.12\);/);
+    expect(base).toMatch(/--wash-b: rgb\(113 176 247 \/ 0\.08\);/);
+    expect(base).toMatch(/--glow: rgb\(113 176 247 \/ 0\.3\);/);
+  });
+});
+
 describe('self-hosted fonts (decision A7)', () => {
   it('never links the Google Fonts CDN', () => {
     expect(tokenCss).not.toContain('fonts.googleapis.com');

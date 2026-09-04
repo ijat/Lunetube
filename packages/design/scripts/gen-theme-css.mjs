@@ -83,9 +83,13 @@ function blockFor(name, json) {
   lines.push(`  --accent: ${toCss({ ...accent, a: 1 })};`);
   lines.push(`  --accent-rgb: ${r} ${g} ${b};`);
   // `--accent-ink` is a design-system constant, defined once in base.css (F17).
-  lines.push(`  --glow: rgb(${r} ${g} ${b} / 0.32);`);
-  lines.push(`  --wash-a: rgb(${r} ${g} ${b} / 0.20);`);
-  lines.push(`  --wash-b: rgb(${r} ${g} ${b} / 0.13);`);
+  // Wash alphas lowered for real OS glass (decision A21 / step P2-G): the
+  // drifting backdrop blobs and the per-video DominantColorWash now sit on
+  // vibrancy/acrylic with the desktop showing through, so a heavy accent wash
+  // fights the translucency. --glow stays the one place colour still reads.
+  lines.push(`  --glow: rgb(${r} ${g} ${b} / 0.3);`);
+  lines.push(`  --wash-a: rgb(${r} ${g} ${b} / 0.12);`);
+  lines.push(`  --wash-b: rgb(${r} ${g} ${b} / 0.08);`);
   // Per-theme glass tint, consumed by `.glass-root` in glass.css (F8).
   if (typeof json.colors.GlassTintColor === 'string') {
     const tint = parseColor(json.colors.GlassTintColor);

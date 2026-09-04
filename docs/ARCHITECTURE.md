@@ -185,14 +185,54 @@ branch, and sidesteps Chromium's autoplay policy.
   no `/mono(space)?/i` in the token layer.
 - Glass: two blur layers max (PRD §7 budget). All blur values are tokens
   (`--blur-root` / `--blur-panel` / `--blur-bar`). `--glass-material-opacity`
-  defaults to `0.7` (decision A4); `.glass-root` tints with the per-theme
-  `--glass-tint-rgb`; each theme also exposes `--glass-opacity-option` for the
-  "glass level" setting.
+  defaults to `0.34` (decision A21 — lowered from A4's `0.7`, which assumed an
+  opaque window); `.glass-root` tints with the per-theme `--glass-tint-rgb`;
+  each theme also exposes `--glass-opacity-option` for the "glass level" setting.
 - Fonts are self-hosted (decision A7) — no `fonts.googleapis.com`.
 - The accent-theme id set has one home: `ACCENT_THEMES` / `ACCENT_THEME_LABELS`
   in `@lunetube/shared`. `gen-theme-css.mjs` throws on any source-JSON /
   `THEME_ORDER` mismatch, and `renderer/theme-ids.test.ts` fails CI if the
   generated CSS drifts from `ACCENT_THEMES`.
+
+## Window materials / glass (decision A21)
+
+The window is **transparent to the desktop** and the OS compositor's material
+sits behind the renderer. The renderer then splits every surface into one of
+three tiers:
+
+| tier                | surfaces                                                               | treatment                                                                                                                                                                                                                                             |
+| ------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Chrome**          | top bar, now-playing dock                                              | Clear glass — a near-invisible tint (`rgb(255 255 255 / 0.02)`) over one `backdrop-filter` blur; the OS material carries it. Small text takes `--text-shadow-glass` for legibility over any wallpaper.                                                |
+| **Content surface** | cards, panels, filter bars, channel header, comment rows, home shelves | A **subtle glass tint** via `--glass-1` / `--glass-2` (white-alpha, `~0.045` / `~0.075`) — these read as a faint frost over vibrancy, not as the near-opaque fills A4 assumed over the old `--void`. Nested cards use flat alpha, never a third blur. |
+| **Opaque stage**    | the `<video>` element, the click-to-play poster / gradient placeholder | Fully opaque (`#05070b`). **No desktop bleed through a playing frame.**                                                                                                                                                                               |
+
+**Making a new surface glass-correct** (for the P2 route steps):
+
+- Decorative container → `.glass-panel` (one blur) or `.glass-flat` (no blur);
+  never stack another `backdrop-filter`.
+- Text on a surface that sits on the transparent stage inherits
+  `--text-shadow-glass` from `.stage__content`. **Reset `text-shadow: none`** on
+  (a) large Bricolage display type (≥28px — a shadow reads as mud; `.display`,
+  `.route__title`, `.watch__title` already do this) and (b) long-form body copy
+  on a tinted surface (the watch description; comment bodies in P2-10).
+- The per-video `DominantColorWash` and the drifting `Backdrop` blobs write
+  `--wash-a` / `--wash-b` (≈`0.12` / `0.08` alpha) and `--glow` (≈`0.30`) — a
+  hint of colour on the glass, not a wash that fights the translucency. The
+  ~1.1 s cross-fade is the CSS `transition` on `.backdrop::*`; global.css's
+  reduced-motion block (`*, *::before, *::after`) collapses it.
+
+**Per-platform behaviour** (`apps/desktop/src/main/windows/mainWindow.ts`):
+
+| OS                   | mechanism                                                                                                                                                                                                  | notes                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **macOS**            | `vibrancy: 'under-window'` + `visualEffectState: 'active'` + transparent `backgroundColor` (`#00000000`); `titleBarStyle: 'hiddenInset'`, `trafficLightPosition` y-centred in the 44 px bar (`(44−16)/2`). | Renders as Liquid Glass on macOS 26+; plain vibrancy below that.                                                                                                                                                                                                                                                                                                                         |
+| **Windows 11 22H2+** | `backgroundMaterial: 'acrylic'` + `titleBarOverlay`; `backgroundColor` stays opaque `#0a0d13`.                                                                                                             | Frameless + acrylic has a known Electron quirk: the acrylic backdrop can swallow the resize hit-region near the window edges — acceptable for now, revisit if users report hard-to-grab edges. On **pre-22H2 Windows** `backgroundMaterial` is a silent no-op and the opaque `#0a0d13` `backgroundColor` shows through — degrades to a normal dark window, never a broken/invisible one. |
+| **Linux**            | none — Electron exposes no compositor material API. `backgroundColor` opaque `#0a0d13`; the acrylic option is a harmless no-op.                                                                            | Gets only the in-app frost (`backdrop-filter` blurs the app's own gradient/backdrop). Visually flatter than mac/Win but fully functional.                                                                                                                                                                                                                                                |
+
+The safety property: `backgroundColor` is only transparent on macOS, where
+vibrancy is guaranteed to be available. Everywhere else it is the opaque
+`--void`, so a missing/unsupported compositor material can only ever fall back
+to a solid dark window.
 
 ## Version pins that are load-bearing (plan F6 / R7)
 
