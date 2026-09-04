@@ -1,15 +1,18 @@
 /* eslint-disable no-restricted-imports -- dev-only fixture recorder legitimately needs youtubei.js */
 /**
- * Opt-in fixture recorder: `pnpm fixtures:record`.
+ * Opt-in fixture recorder: `pnpm fixtures:record [-- --kind video|search|suggestions --query <q>]`.
  *
- * Hits YouTube **once** with the IOS client and writes redacted `video-*.json`
- * fixtures that `FakeYouTubeSource` and the mapper tests consume. Never run in
- * CI (GitHub IPs are bot-blocked — plan F2/R2) and never committed without
- * eyeballing the output for leaked tokens.
+ * `--kind video` (default) hits YouTube once with the IOS client and writes
+ * redacted `video-*.json` fixtures. `--kind search` / `--kind suggestions` write
+ * `search-recorded.json` / `suggestions-recorded.json` for a `--query` (default
+ * `lofi`). Never run in CI (GitHub IPs are bot-blocked — plan F2/R2) and never
+ * committed without eyeballing the output for leaked tokens.
  *
  * Redaction: every googlevideo / timedtext URL is replaced with a synthetic one
- * that keeps only `expire` and `itag`; `visitor_data`, cookies, `po_token`,
- * `cpn`, `signatureCipher` and client IP params never reach disk.
+ * that keeps only `expire` and `itag`; every ytimg / ggpht / googleusercontent
+ * URL is stripped to `origin + pathname` (drops tracking params); `visitor_data`,
+ * cookies, `po_token`, `cpn`, `signatureCipher`, `actions`/`session`/`client`
+ * back-references and client IP params never reach disk.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -43,6 +46,43 @@ function redactUrl(raw) {
   } catch {
     return 'https://redacted.example/invalid';
   }
+}
+
+/** ytimg / ggpht / googleusercontent → `origin + pathname` (drops query); else `redactUrl`. */
+function redactImageUrl(raw) {
+  if (typeof raw !== 'string' || raw.length === 0) return raw;
+  try {
+    const url = new URL(raw);
+    if (/(^|\.)(ytimg\.com|ggpht\.com|googleusercontent\.com)$/.test(url.hostname)) {
+      return `${url.origin}${url.pathname}`;
+    }
+    return redactUrl(raw);
+  } catch {
+    return 'https://redacted.example/invalid';
+  }
+}
+
+/**
+ * Structural deep copy with URL redaction, a recursion cap and a cycle guard —
+ * used for the search/suggestions recorders, where the node shapes are deep and
+ * varied. Drops the youtubei.js back-reference keys that would otherwise pull in
+ * the whole session.
+ */
+function deepRedact(value, seen = new WeakSet(), depth = 0) {
+  if (value == null) return null;
+  if (typeof value === 'string') return /^https?:\/\//i.test(value) ? redactImageUrl(value) : value;
+  if (typeof value === 'number' || typeof value === 'boolean') return value;
+  if (typeof value !== 'object' || depth > 12) return undefined;
+  if (seen.has(value)) return undefined;
+  seen.add(value);
+  if (Array.isArray(value)) return value.slice(0, 40).map((v) => deepRedact(v, seen, depth + 1));
+  const out = {};
+  for (const [key, v] of Object.entries(value)) {
+    if (key === 'actions' || key === 'session' || key === 'client' || key === 'rt') continue;
+    const redacted = deepRedact(v, seen, depth + 1);
+    if (redacted !== undefined) out[key] = redacted;
+  }
+  return out;
 }
 
 function redactFormat(f) {
@@ -227,8 +267,59 @@ async function record({ stem, id }) {
   console.log(`wrote ${path}`);
 }
 
+async function recordSearch(query) {
+  const yt = await Innertube.create({
+    cache: new UniversalCache(true, CACHE_DIR),
+    retrieve_player: false,
+  });
+  const search = await yt.search(query);
+  const fixture = {
+    meta: {
+      query,
+      key: `${query}|relevance|any|any|all`,
+      recordedAt: new Date().toISOString(),
+      note: 'Recorded by scripts/record-fixtures.mjs --kind search — image URLs redacted.',
+    },
+    estimated_results: search.estimated_results ?? null,
+    has_continuation: search.has_continuation ?? false,
+    results: (search.results ?? [])
+      .slice(0, 20)
+      .map((node) => ({ type: node.type, ...deepRedact(node) })),
+  };
+  const path = `${FIXTURES_DIR}/search-recorded.json`;
+  writeFileSync(path, `${JSON.stringify(fixture, null, 2)}\n`);
+  console.log(`wrote ${path}`);
+}
+
+async function recordSuggestions(query) {
+  const yt = await Innertube.create({
+    cache: new UniversalCache(true, CACHE_DIR),
+    retrieve_player: false,
+  });
+  const suggestions = await yt.getSearchSuggestions(query);
+  const path = `${FIXTURES_DIR}/suggestions-recorded.json`;
+  writeFileSync(path, `${JSON.stringify({ query, suggestions }, null, 2)}\n`);
+  console.log(`wrote ${path}`);
+}
+
+function parseArgs(argv) {
+  const out = { kind: 'video', query: 'lofi' };
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === '--kind') out.kind = argv[(i += 1)];
+    else if (argv[i] === '--query') out.query = argv[(i += 1)];
+  }
+  return out;
+}
+
+const args = parseArgs(process.argv.slice(2));
 mkdirSync(CACHE_DIR, { recursive: true });
-for (const target of TARGETS) {
-  await record(target);
+if (args.kind === 'search') {
+  await recordSearch(args.query);
+} else if (args.kind === 'suggestions') {
+  await recordSuggestions(args.query);
+} else {
+  for (const target of TARGETS) {
+    await record(target);
+  }
 }
 console.log('\nDone. Review the JSON for leaked tokens before committing.');

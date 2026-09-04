@@ -4,8 +4,10 @@
  * This file, `session.ts` and `errors.ts` are the only three allowed to import
  * `youtubei.js`. Everything it returns is a plain `@lunetube/shared` DTO.
  *
- * Phase 1 scope: `getVideo`, `getStreams`, `getRelated`, `getDiagnostics`. The
- * seven Phase-2 methods return a `NOT_IMPLEMENTED` `LuneError`.
+ * Phase 1 scope: `getVideo`, `getStreams`, `getRelated`, `getDiagnostics`.
+ * Phase 2 adds `search`, `getSearchSuggestions` and `resolveUrl` (P2-3); the
+ * remaining four (`getComments`, `getCommentReplies`, `getChannel`,
+ * `getPlaylist`) still return a `NOT_IMPLEMENTED` `LuneError`.
  *
  * `getStreams` owns **client selection** (walking `CLIENT_LADDER`) and
  * **recovery** (session refresh on a parser break); turning one `VideoInfo`
@@ -54,6 +56,9 @@ import {
 import { mapPlayabilityStatus, mapYoutubeError, notImplemented } from './errors.js';
 import { InnertubeSession, youtubeiVersion, type InnertubeSessionOptions } from './session.js';
 import { mapFeedVideos, mapVideoDetail, type RawVideoInfo } from './map/video.js';
+import { mapSearchPage, toInnertubeFilters, type RawSearch } from './map/search.js';
+import { isValidChannelId, isValidPlaylistId, isValidVideoId, parseYouTubeUrl } from './map/url.js';
+import { ContinuationStore } from './continuations.js';
 import { ClassicDashStrategy } from '../playback/classicDash.js';
 import type { PlaybackInfo, PlaybackStrategy } from '../playback/strategy.js';
 
@@ -101,6 +106,8 @@ export class InnertubeYouTubeSource implements YouTubeSource {
   readonly #rewriteCaption: (url: URL) => URL;
   readonly #ladder = new Map<InnerTubeClient, LadderState>();
   readonly #strategy: PlaybackStrategy;
+  /** Pagination state for the continuation-bearing Phase-2 feeds (search today). */
+  readonly #continuations = new ContinuationStore();
   #lastClient: string | null = null;
   #lastExpiresAt: number | null = null;
 
@@ -275,12 +282,48 @@ export class InnertubeYouTubeSource implements YouTubeSource {
   }
 
   // ---- Phase 2 ----
-  async search(_params: SearchParams): Promise<Result<SearchPage, LuneError>> {
-    return err(notImplemented('search'));
+
+  async search(params: SearchParams): Promise<Result<SearchPage, LuneError>> {
+    if (params.continuation !== undefined) {
+      const stored = this.#continuations.get('search', params.continuation);
+      if (stored === undefined) {
+        return err(
+          makeLuneError('INVALID_INPUT', 'This search refreshed. Reload to keep browsing.', {
+            detail: 'continuation:search',
+          }),
+        );
+      }
+      return this.#guard(async () => {
+        const next = await (stored as { getContinuation(): Promise<unknown> }).getContinuation();
+        return ok(this.#toSearchPage(next));
+      });
+    }
+
+    const query = typeof params.query === 'string' ? params.query.trim() : '';
+    if (query.length === 0 || query.length > 256) {
+      return err(makeLuneError('INVALID_INPUT', 'Search query must be 1–256 characters.'));
+    }
+    const filters = params.filters ? toInnertubeFilters(params.filters) : undefined;
+    return this.#guard(async (yt) => {
+      const search = await yt.search(query, filters);
+      return ok(this.#toSearchPage(search));
+    });
   }
-  async getSearchSuggestions(_params: { query: string }): Promise<Result<string[], LuneError>> {
-    return err(notImplemented('getSearchSuggestions'));
+
+  #toSearchPage(search: unknown): SearchPage {
+    const { items, estimatedResults } = mapSearchPage(search as RawSearch, this.#rewriteImage);
+    const hasMore = (search as { has_continuation?: unknown }).has_continuation === true;
+    return hasMore
+      ? { items, estimatedResults, continuation: this.#continuations.put('search', search) }
+      : { items, estimatedResults };
   }
+
+  async getSearchSuggestions(params: { query: string }): Promise<Result<string[], LuneError>> {
+    const query = typeof params.query === 'string' ? params.query.trim() : '';
+    if (query.length < 2) return ok([]);
+    return this.#guard(async (yt) => ok(dedupeSuggestions(await yt.getSearchSuggestions(query))));
+  }
+
   async getComments(_params: GetCommentsParams): Promise<Result<CommentPage, LuneError>> {
     return err(notImplemented('getComments'));
   }
@@ -295,8 +338,17 @@ export class InnertubeYouTubeSource implements YouTubeSource {
   async getPlaylist(_params: GetPlaylistParams): Promise<Result<PlaylistDetail, LuneError>> {
     return err(notImplemented('getPlaylist'));
   }
-  async resolveUrl(_params: { url: string }): Promise<Result<NavTarget, LuneError>> {
-    return err(notImplemented('resolveUrl'));
+  /**
+   * Local parse first (`parseYouTubeUrl`, offline, host-allow-listed); the
+   * network (`yt.resolveURL`) is only reached for a `/@handle` / `/c/` /
+   * `/user/` path on a YouTube host — the allow-list therefore runs **before**
+   * any upstream call, so a foreign URL is never forwarded (plan P2-3).
+   */
+  async resolveUrl(params: { url: string }): Promise<Result<NavTarget, LuneError>> {
+    const raw = typeof params.url === 'string' ? params.url.trim() : '';
+    const local = parseYouTubeUrl(raw);
+    if (local !== null) return ok(local);
+    return this.#guard(async (yt) => ok(navTargetFromEndpoint(await yt.resolveURL(raw), raw)));
   }
 
   /**
@@ -333,6 +385,42 @@ function invalidId(): LuneError {
 
 function parseChanged(detail: string): LuneError {
   return makeLuneError('YT_PARSE_CHANGED', 'YouTube returned an unexpected shape.', { detail });
+}
+
+/** Trim, drop empties / over-long / duplicates, cap at 12 (plan P2-3). */
+function dedupeSuggestions(raw: unknown): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const value of Array.isArray(raw) ? raw : []) {
+    if (typeof value !== 'string') continue;
+    const s = value.trim();
+    if (s.length === 0 || s.length > 100 || seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+    if (out.length >= 12) break;
+  }
+  return out;
+}
+
+/**
+ * A youtubei.js `NavigationEndpoint` (from `yt.resolveURL`) → `NavTarget`. Reads
+ * `payload.{videoId,playlistId,browseId}` (P2-F8) and re-validates each id before
+ * it leaves the adapter.
+ */
+function navTargetFromEndpoint(endpoint: unknown, url: string): NavTarget {
+  const payload =
+    (endpoint as { payload?: Record<string, unknown> } | null | undefined)?.payload ?? {};
+  const videoId = payload['videoId'];
+  const playlistId = payload['playlistId'];
+  const browseId = payload['browseId'];
+  if (typeof videoId === 'string' && isValidVideoId(videoId)) return { kind: 'video', videoId };
+  if (typeof playlistId === 'string' && isValidPlaylistId(playlistId)) {
+    return { kind: 'playlist', playlistId };
+  }
+  if (typeof browseId === 'string' && isValidChannelId(browseId)) {
+    return { kind: 'channel', channelId: browseId };
+  }
+  return { kind: 'unknown', url };
 }
 
 /**

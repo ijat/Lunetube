@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "note": "Hand-authored. Continuation target of search-basic (looked up by stem)."
+  },
+  "estimated_results": 1000000,
+  "has_continuation": false,
+  "results": [
+    {
+      "type": "Video",
+      "video_id": "page2vid0001",
+      "title": { "text": "Lofi Radio — Page 2 Result A" },
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/page2vid0001/hqdefault.jpg", "width": 480, "height": 360 }
+      ],
+      "author": { "id": "UC5555555555555555555555", "name": "Night Owl Radio" },
+      "short_view_count": { "text": "44K views" },
+      "published": { "text": "5 months ago" },
+      "length_text": { "text": "1:02:03" },
+      "is_live": false
+    },
+    {
+      "type": "Video",
+      "video_id": "page2vid0002",
+      "title": { "text": "Lofi Radio — Page 2 Result B" },
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/page2vid0002/hqdefault.jpg", "width": 480, "height": 360 }
+      ],
+      "author": { "id": "UC6666666666666666666666", "name": "Rainy Mood" },
+      "short_view_count": { "text": "9.1K views" },
+      "published": { "text": "1 year ago" },
+      "length_text": { "text": "58:00" },
+      "is_live": false
+    }
+  ]
+}

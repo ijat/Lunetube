@@ -9,6 +9,7 @@
  * module for its error classes — module load only, still zero network.)
  */
 import {
+  DEFAULT_SEARCH_FILTERS,
   err,
   makeLuneError,
   ok,
@@ -41,6 +42,8 @@ import {
 import { CLIENT_LADDER, ladderSkipReason } from '../innertube/clients.js';
 import { mapPlayabilityStatus, notImplemented } from '../innertube/errors.js';
 import { mapFeedVideos, mapVideoDetail } from '../innertube/map/video.js';
+import { mapSearchPage, type RawSearch } from '../innertube/map/search.js';
+import { parseYouTubeUrl } from '../innertube/map/url.js';
 import { ClassicDashStrategy } from '../playback/classicDash.js';
 import type {
   DashRequest,
@@ -48,7 +51,32 @@ import type {
   PlaybackStrategy,
   UrlRewriter,
 } from '../playback/strategy.js';
-import { defaultFixturesDir, loadVideoFixtures, type VideoFixture } from './fixtures.js';
+import {
+  defaultFixturesDir,
+  loadFixturesByPrefix,
+  loadVideoFixtures,
+  type VideoFixture,
+} from './fixtures.js';
+
+/** A `search-*.json` fixture: a subset of a youtubei.js `Search` feed. */
+interface SearchFixture extends RawSearch {
+  meta?: {
+    /** Bare query for the fallback match. */
+    query?: string;
+    /** Full composite key `query|sort|uploadDate|duration|type` for an exact match. */
+    key?: string;
+    /** Stem of the next `search-*.json` fixture — served as the opaque continuation. */
+    continuation?: string;
+    note?: string;
+  };
+  has_continuation?: boolean;
+}
+
+/** A `suggestions-*.json` fixture. */
+interface SuggestionsFixture {
+  query: string;
+  suggestions: string[];
+}
 
 export interface FakeYouTubeSourceOptions {
   /** Directory of `video-*.json` fixtures. Defaults to the package's own. */
@@ -59,6 +87,8 @@ export interface FakeYouTubeSourceOptions {
 
 export class FakeYouTubeSource implements YouTubeSource {
   readonly #fixtures: Map<string, VideoFixture>;
+  readonly #searchFixtures: Map<string, SearchFixture>;
+  readonly #suggestionFixtures: Map<string, SuggestionsFixture>;
   readonly #media: UrlRewriter;
   readonly #image: UrlRewriter;
   readonly #caption: UrlRewriter;
@@ -67,7 +97,10 @@ export class FakeYouTubeSource implements YouTubeSource {
   #lastExpiresAt: number | null = null;
 
   constructor(opts: FakeYouTubeSourceOptions = {}) {
-    this.#fixtures = loadVideoFixtures(opts.fixturesDir ?? defaultFixturesDir());
+    const dir = opts.fixturesDir ?? defaultFixturesDir();
+    this.#fixtures = loadVideoFixtures(dir);
+    this.#searchFixtures = loadFixturesByPrefix<SearchFixture>('search-', dir);
+    this.#suggestionFixtures = loadFixturesByPrefix<SuggestionsFixture>('suggestions-', dir);
     this.#media = opts.rewriters?.media ?? identityRewriter;
     this.#image = opts.rewriters?.image ?? identityRewriter;
     this.#caption = opts.rewriters?.caption ?? identityRewriter;
@@ -155,12 +188,60 @@ export class FakeYouTubeSource implements YouTubeSource {
     });
   }
 
-  async search(_params: SearchParams): Promise<Result<SearchPage, LuneError>> {
-    return err(notImplemented('search'));
+  async search(params: SearchParams): Promise<Result<SearchPage, LuneError>> {
+    if (params.continuation !== undefined) {
+      const fx = this.#searchFixtures.get(params.continuation);
+      if (fx == null) {
+        return err(
+          makeLuneError('INVALID_INPUT', 'This search refreshed. Reload to keep browsing.', {
+            detail: 'continuation:search',
+          }),
+        );
+      }
+      return ok(this.#searchPage(fx));
+    }
+
+    const query = typeof params.query === 'string' ? params.query.trim() : '';
+    if (query.length === 0 || query.length > 256) {
+      return err(makeLuneError('INVALID_INPUT', 'Search query must be 1–256 characters.'));
+    }
+    const f = params.filters ?? DEFAULT_SEARCH_FILTERS;
+    const key = `${query}|${f.sort}|${f.uploadDate}|${f.duration}|${f.type}`;
+    const values = [...this.#searchFixtures.values()];
+    const fx =
+      values.find((x) => x.meta?.key === key) ??
+      values.find((x) => (x.meta?.query ?? '').toLowerCase() === query.toLowerCase());
+    if (fx == null) {
+      return err(
+        makeLuneError('YT_UNAVAILABLE', `No search fixture for "${query}".`, {
+          detail: 'fake',
+          hint: 'Add packages/youtube/tests/fixtures/search-*.json',
+        }),
+      );
+    }
+    return ok(this.#searchPage(fx));
   }
-  async getSearchSuggestions(_params: { query: string }): Promise<Result<string[], LuneError>> {
-    return err(notImplemented('getSearchSuggestions'));
+
+  #searchPage(fx: SearchFixture): SearchPage {
+    const { items, estimatedResults } = mapSearchPage(fx, this.#image);
+    const next = fx.meta?.continuation;
+    return typeof next === 'string' && next.length > 0
+      ? { items, estimatedResults, continuation: next }
+      : { items, estimatedResults };
   }
+
+  async getSearchSuggestions(params: { query: string }): Promise<Result<string[], LuneError>> {
+    const query = typeof params.query === 'string' ? params.query.trim() : '';
+    if (query.length < 2) return ok([]);
+    const values = [...this.#suggestionFixtures.values()];
+    const fx =
+      values.find((x) => (x.query ?? '').toLowerCase() === query.toLowerCase()) ??
+      values.find((x) => query.toLowerCase().startsWith((x.query ?? '').toLowerCase())) ??
+      values[0];
+    const list = Array.isArray(fx?.suggestions) ? fx.suggestions : [];
+    return ok(list.filter((s) => typeof s === 'string' && s.trim().length > 0).slice(0, 12));
+  }
+
   async getComments(_params: GetCommentsParams): Promise<Result<CommentPage, LuneError>> {
     return err(notImplemented('getComments'));
   }
@@ -175,8 +256,13 @@ export class FakeYouTubeSource implements YouTubeSource {
   async getPlaylist(_params: GetPlaylistParams): Promise<Result<PlaylistDetail, LuneError>> {
     return err(notImplemented('getPlaylist'));
   }
-  async resolveUrl(_params: { url: string }): Promise<Result<NavTarget, LuneError>> {
-    return err(notImplemented('resolveUrl'));
+  async resolveUrl(params: { url: string }): Promise<Result<NavTarget, LuneError>> {
+    const raw = typeof params.url === 'string' ? params.url.trim() : '';
+    const local = parseYouTubeUrl(raw);
+    // A `/@handle` / `/c/` / `/user/` URL needs a network hop the real adapter
+    // makes; the fake has no fixture for it, so report a clean `unknown` rather
+    // than invent an id.
+    return ok(local ?? { kind: 'unknown', url: raw });
   }
 }
 

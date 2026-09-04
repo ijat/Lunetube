@@ -82,6 +82,41 @@ describe.skipIf(!LIVE)('live YouTube (LUNE_LIVE=1)', () => {
     expect(res.value.storyboards.length).toBeGreaterThan(0);
   }, 30_000);
 
+  it('search("lofi") returns rich result cards (catches a LockupView mapper regression)', async () => {
+    const res = await source.search({ query: 'lofi' });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.items.length).toBeGreaterThanOrEqual(10);
+    const rich = res.value.items.filter((item) => {
+      const view =
+        item.kind === 'video'
+          ? { title: item.video.title, thumb: item.video.thumbnailUrl }
+          : item.kind === 'playlist'
+            ? { title: item.playlist.title, thumb: item.playlist.thumbnailUrl }
+            : { title: item.channel.name, thumb: item.channel.avatarUrl };
+      return view.title.length > 0 && view.thumb != null;
+    });
+    expect(rich.length).toBeGreaterThanOrEqual(8);
+  }, 30_000);
+
+  it('getSearchSuggestions("lofi") returns at least one suggestion', async () => {
+    const res = await source.getSearchSuggestions({ query: 'lofi' });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.value.length).toBeGreaterThanOrEqual(1);
+      expect(res.value.every((s) => typeof s === 'string' && s.length > 0)).toBe(true);
+    }
+  }, 30_000);
+
+  it('resolveUrl(@handle) resolves to a channel id over the network', async () => {
+    const res = await source.resolveUrl({ url: 'https://www.youtube.com/@veritasium' });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.value.kind).toBe('channel');
+      if (res.value.kind === 'channel') expect(res.value.channelId).toMatch(/^UC[\w-]{22}$/);
+    }
+  }, 30_000);
+
   it('routes every URL of a real manifest through the proxy, media and captions alike', async () => {
     const proxied = new InnertubeYouTubeSource({
       cacheDir: cacheDir(),
