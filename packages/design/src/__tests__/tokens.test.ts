@@ -79,10 +79,10 @@ describe('typography lock (PRD §7)', () => {
   });
 });
 
-describe('glass material opacity (decision A4)', () => {
-  it('defaults --glass-material-opacity to 0.7', () => {
+describe('glass material opacity (decision A4, lowered for real-glass)', () => {
+  it('defaults --glass-material-opacity to 0.34 (was 0.7 before OS vibrancy/acrylic)', () => {
     const glass = read('tokens/glass.css');
-    expect(glass).toMatch(/--glass-material-opacity:\s*0\.7\s*;/);
+    expect(glass).toMatch(/--glass-material-opacity:\s*0\.34\s*;/);
   });
 
   it('centralises every blur value as a token, including the top bar (F8)', () => {
