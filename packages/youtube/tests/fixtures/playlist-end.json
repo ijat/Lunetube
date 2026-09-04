@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "endOfList": true,
+    "note": "Simulates the Playlist constructor's end-of-list throw ('Got empty continuation response...', P2-F6 #3) — the adapter must return an empty ok page, not an error."
+  }
+}

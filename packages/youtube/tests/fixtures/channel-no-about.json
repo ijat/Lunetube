@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "channelId": "UC3333333333333333333333",
+    "tab": "about",
+    "key": "UC3333333333333333333333|about",
+    "note": "about: null simulates the getAbout() 'About not found' throw (P2-F6) — degrades to the channel metadata description."
+  },
+  "channel": {
+    "has_videos": true,
+    "has_shorts": false,
+    "has_playlists": false,
+    "has_live_streams": false,
+    "has_podcasts": false,
+    "has_about": false,
+    "header": {
+      "type": "C4TabbedHeader",
+      "author": { "name": "Small Channel", "thumbnails": [] },
+      "channel_id": "UC3333333333333333333333"
+    },
+    "metadata": {
+      "external_id": "UC3333333333333333333333",
+      "title": "Small Channel",
+      "description": "A small channel with no about tab.",
+      "avatar": [],
+      "vanity_channel_url": ""
+    }
+  },
+  "about": null
+}

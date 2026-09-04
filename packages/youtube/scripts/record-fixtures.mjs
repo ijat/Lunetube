@@ -1,12 +1,16 @@
 /* eslint-disable no-restricted-imports -- dev-only fixture recorder legitimately needs youtubei.js */
 /**
- * Opt-in fixture recorder: `pnpm fixtures:record [-- --kind video|search|suggestions --query <q>]`.
+ * Opt-in fixture recorder:
+ * `pnpm fixtures:record [-- --kind video|search|suggestions|channel|playlist --query <q> --id <id>]`.
  *
  * `--kind video` (default) hits YouTube once with the IOS client and writes
  * redacted `video-*.json` fixtures. `--kind search` / `--kind suggestions` write
  * `search-recorded.json` / `suggestions-recorded.json` for a `--query` (default
- * `lofi`). Never run in CI (GitHub IPs are bot-blocked — plan F2/R2) and never
- * committed without eyeballing the output for leaked tokens.
+ * `lofi`). `--kind channel` / `--kind playlist` write `channel-recorded.json`
+ * (first page of the `videos` tab plus `getAbout()`) / `playlist-recorded.json`
+ * for a `--id` (default a small public channel / playlist). Never run in CI
+ * (GitHub IPs are bot-blocked — plan F2/R2) and never committed without
+ * eyeballing the output for leaked tokens.
  *
  * Redaction: every googlevideo / timedtext URL is replaced with a synthetic one
  * that keeps only `expire` and `itag`; every ytimg / ggpht / googleusercontent
@@ -302,11 +306,74 @@ async function recordSuggestions(query) {
   console.log(`wrote ${path}`);
 }
 
+async function recordChannel(channelId) {
+  const yt = await Innertube.create({
+    cache: new UniversalCache(true, CACHE_DIR),
+    retrieve_player: false,
+  });
+  const ch = await yt.getChannel(channelId);
+  const videosTab = ch.has_videos ? await ch.getVideos() : null;
+  const about = ch.has_about ? await ch.getAbout().catch(() => null) : null;
+
+  const fixture = {
+    meta: {
+      channelId,
+      tab: 'videos',
+      key: `${channelId}|videos`,
+      recordedAt: new Date().toISOString(),
+      note: 'Recorded by scripts/record-fixtures.mjs --kind channel — image URLs redacted.',
+    },
+    channel: {
+      has_videos: ch.has_videos,
+      has_shorts: ch.has_shorts,
+      has_playlists: ch.has_playlists,
+      has_live_streams: ch.has_live_streams,
+      has_podcasts: ch.has_podcasts,
+      has_about: ch.has_about,
+      header: deepRedact(ch.header),
+      metadata: deepRedact(ch.metadata),
+    },
+    feed: videosTab
+      ? {
+          has_continuation: videosTab.has_continuation,
+          videos: (videosTab.videos ?? [])
+            .slice(0, 20)
+            .map((n) => ({ type: n.type, ...deepRedact(n) })),
+        }
+      : null,
+    about: about ? { type: about.type, ...deepRedact(about) } : null,
+  };
+  const path = `${FIXTURES_DIR}/channel-recorded.json`;
+  writeFileSync(path, `${JSON.stringify(fixture, null, 2)}\n`);
+  console.log(`wrote ${path}`);
+}
+
+async function recordPlaylist(playlistId) {
+  const yt = await Innertube.create({
+    cache: new UniversalCache(true, CACHE_DIR),
+    retrieve_player: false,
+  });
+  const pl = await yt.getPlaylist(playlistId);
+  const fixture = {
+    meta: {
+      playlistId,
+      recordedAt: new Date().toISOString(),
+      note: 'Recorded by scripts/record-fixtures.mjs --kind playlist — image URLs redacted.',
+    },
+    info: deepRedact(pl.info),
+    videos: (pl.videos ?? []).slice(0, 20).map((n) => ({ type: n.type, ...deepRedact(n) })),
+  };
+  const path = `${FIXTURES_DIR}/playlist-recorded.json`;
+  writeFileSync(path, `${JSON.stringify(fixture, null, 2)}\n`);
+  console.log(`wrote ${path}`);
+}
+
 function parseArgs(argv) {
-  const out = { kind: 'video', query: 'lofi' };
+  const out = { kind: 'video', query: 'lofi', id: undefined };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--kind') out.kind = argv[(i += 1)];
     else if (argv[i] === '--query') out.query = argv[(i += 1)];
+    else if (argv[i] === '--id') out.id = argv[(i += 1)];
   }
   return out;
 }
@@ -317,6 +384,10 @@ if (args.kind === 'search') {
   await recordSearch(args.query);
 } else if (args.kind === 'suggestions') {
   await recordSuggestions(args.query);
+} else if (args.kind === 'channel') {
+  await recordChannel(args.id ?? 'UCHnyfMqiRRG1u-2MsSQLbXA'); // Veritasium
+} else if (args.kind === 'playlist') {
+  await recordPlaylist(args.id ?? 'PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb');
 } else {
   for (const target of TARGETS) {
     await record(target);

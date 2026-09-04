@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "channelId": "UC2222222222222222222222",
+    "tab": "shorts",
+    "key": "UC2222222222222222222222|shorts",
+    "note": "Hand-authored. PageHeader → PageHeaderView shape (the newer header)."
+  },
+  "channel": {
+    "has_videos": true,
+    "has_shorts": true,
+    "has_playlists": false,
+    "has_live_streams": false,
+    "has_podcasts": false,
+    "has_about": true,
+    "header": {
+      "type": "PageHeader",
+      "content": {
+        "title": { "text": { "text": "Shorts Channel" } },
+        "image": {
+          "avatar": {
+            "image": [{ "url": "https://yt3.ggpht.com/shorts.jpg", "width": 176, "height": 176 }]
+          }
+        },
+        "banner": {
+          "image": [
+            { "url": "https://yt3.ggpht.com/shortsbanner.jpg", "width": 1280, "height": 351 }
+          ]
+        },
+        "description": { "description": { "text": "Bite-size video, big ideas." } },
+        "metadata": {
+          "metadata_rows": [
+            {
+              "metadata_parts": [
+                { "text": { "text": "820K subscribers" } },
+                { "text": { "text": "120 videos" } }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "metadata": {
+      "external_id": "UC2222222222222222222222",
+      "title": "Shorts Channel",
+      "description": "Bite-size video, big ideas.",
+      "avatar": [{ "url": "https://yt3.ggpht.com/shorts.jpg", "width": 176, "height": 176 }],
+      "vanity_channel_url": "https://www.youtube.com/@shortschannel"
+    }
+  },
+  "feed": {
+    "has_continuation": false,
+    "videos": [
+      {
+        "type": "ShortsLockupView",
+        "entity_id": "short0000001",
+        "overlay_metadata": {
+          "primary_text": { "text": "Quick tip" },
+          "secondary_text": { "text": "2.1M views" }
+        },
+        "thumbnail": [
+          { "url": "https://i.ytimg.com/vi/short1/hq.jpg", "width": 320, "height": 180 }
+        ]
+      }
+    ]
+  }
+}

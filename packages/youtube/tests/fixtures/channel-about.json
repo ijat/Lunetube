@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "channelId": "UC1111111111111111111111",
+    "tab": "about",
+    "key": "UC1111111111111111111111|about"
+  },
+  "channel": {
+    "has_videos": true,
+    "has_shorts": true,
+    "has_playlists": true,
+    "has_live_streams": false,
+    "has_podcasts": false,
+    "has_about": true,
+    "header": {
+      "type": "C4TabbedHeader",
+      "author": { "name": "Lofi Girl", "thumbnails": [] },
+      "channel_id": "UC1111111111111111111111"
+    },
+    "metadata": {
+      "external_id": "UC1111111111111111111111",
+      "title": "Lofi Girl",
+      "description": "Chill beats to study/relax to.",
+      "avatar": [],
+      "vanity_channel_url": "https://www.youtube.com/@lofigirl"
+    }
+  },
+  "about": {
+    "description": { "text": "Chill beats to study/relax to. Uploads daily." },
+    "view_count": { "text": "1.2B views" },
+    "joined_date": { "text": "Joined Feb 9, 2015" },
+    "country": { "text": "France" },
+    "primary_links": [
+      {
+        "title": { "text": "lofigirl.com" },
+        "endpoint": { "metadata": { "url": "https://lofigirl.com" } }
+      }
+    ]
+  }
+}

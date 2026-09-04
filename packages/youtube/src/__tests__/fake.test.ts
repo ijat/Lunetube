@@ -74,12 +74,10 @@ describe('FakeYouTubeSource — the seam CI runs against', () => {
     }
   });
 
-  it('the four still-unwritten Phase-2 methods return NOT_IMPLEMENTED', async () => {
+  it('the two still-unwritten Phase-2 methods return NOT_IMPLEMENTED', async () => {
     const results = await Promise.all([
       src.getComments({ videoId: 'x', sort: 'top' }),
       src.getCommentReplies({ handle: 'h' }),
-      src.getChannel({ channelId: 'x', tab: 'videos' }),
-      src.getPlaylist({ playlistId: 'x' }),
     ]);
     for (const res of results) {
       expect(res.ok).toBe(false);
@@ -92,6 +90,13 @@ describe('FakeYouTubeSource — the seam CI runs against', () => {
     expect((await src.getSearchSuggestions({ query: 'lofi' })).ok).toBe(true);
     const nav = await src.resolveUrl({ url: 'https://youtu.be/dQw4w9WgXcQ' });
     expect(nav.ok && nav.value).toEqual({ kind: 'video', videoId: 'dQw4w9WgXcQ' });
+  });
+
+  it('getChannel / getPlaylist are implemented (P2-4)', async () => {
+    const channel = await src.getChannel({ channelId: 'UC1111111111111111111111', tab: 'videos' });
+    expect(channel.ok).toBe(true);
+    const playlist = await src.getPlaylist({ playlistId: 'PLbasic00000000000000000001' });
+    expect(playlist.ok).toBe(true);
   });
 
   it('getDiagnostics reports the fake adapter', async () => {

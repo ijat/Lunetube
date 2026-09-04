@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "note": "Continuation page — no header (plan P2-4). No further continuation: exercises 'channel-with-no-continuation'."
+  },
+  "feed": {
+    "has_continuation": false,
+    "videos": [
+      {
+        "type": "Video",
+        "video_id": "vid00000003",
+        "title": { "text": "Lofi Radio 3" },
+        "thumbnails": [
+          { "url": "https://i.ytimg.com/vi/vid3/hq.jpg", "width": 480, "height": 360 }
+        ],
+        "author": { "id": "UC1111111111111111111111", "name": "Lofi Girl" },
+        "short_view_count": { "text": "500K views" },
+        "published": { "text": "3 years ago" },
+        "length_text": { "text": "3:00:00" }
+      }
+    ]
+  }
+}

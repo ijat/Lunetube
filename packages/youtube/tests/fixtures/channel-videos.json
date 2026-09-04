@@ -1,0 +1,68 @@
+{
+  "meta": {
+    "channelId": "UC1111111111111111111111",
+    "tab": "videos",
+    "key": "UC1111111111111111111111|videos",
+    "continuation": "channel-videos-page2",
+    "note": "Hand-authored. C4TabbedHeader shape, has a page 2."
+  },
+  "channel": {
+    "has_videos": true,
+    "has_shorts": true,
+    "has_playlists": true,
+    "has_live_streams": false,
+    "has_podcasts": false,
+    "has_about": true,
+    "header": {
+      "type": "C4TabbedHeader",
+      "author": {
+        "name": "Lofi Girl",
+        "thumbnails": [
+          { "url": "https://yt3.ggpht.com/lofigirl.jpg", "width": 176, "height": 176 }
+        ],
+        "is_verified": true
+      },
+      "banner": [{ "url": "https://yt3.ggpht.com/banner.jpg", "width": 1280, "height": 351 }],
+      "subscribers": { "text": "13.4M subscribers" },
+      "videos_count": { "text": "412 videos" },
+      "channel_handle": { "text": "@lofigirl" },
+      "channel_id": "UC1111111111111111111111"
+    },
+    "metadata": {
+      "external_id": "UC1111111111111111111111",
+      "title": "Lofi Girl",
+      "description": "Chill beats to study/relax to.",
+      "avatar": [{ "url": "https://yt3.ggpht.com/lofigirl.jpg", "width": 176, "height": 176 }],
+      "vanity_channel_url": "https://www.youtube.com/@lofigirl"
+    }
+  },
+  "feed": {
+    "has_continuation": true,
+    "videos": [
+      {
+        "type": "Video",
+        "video_id": "vid00000001",
+        "title": { "text": "Lofi Radio 1" },
+        "thumbnails": [
+          { "url": "https://i.ytimg.com/vi/vid1/hq.jpg", "width": 480, "height": 360 }
+        ],
+        "author": { "id": "UC1111111111111111111111", "name": "Lofi Girl" },
+        "short_view_count": { "text": "1.2M views" },
+        "published": { "text": "1 year ago" },
+        "length_text": { "text": "2:00:00" }
+      },
+      {
+        "type": "Video",
+        "video_id": "vid00000002",
+        "title": { "text": "Lofi Radio 2" },
+        "thumbnails": [
+          { "url": "https://i.ytimg.com/vi/vid2/hq.jpg", "width": 480, "height": 360 }
+        ],
+        "author": { "id": "UC1111111111111111111111", "name": "Lofi Girl" },
+        "short_view_count": { "text": "900K views" },
+        "published": { "text": "2 years ago" },
+        "length_text": { "text": "1:30:00" }
+      }
+    ]
+  }
+}
