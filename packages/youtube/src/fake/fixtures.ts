@@ -21,7 +21,6 @@ export interface VideoFixture extends RawVideoInfo {
   streaming_data?: RawStreamingData | null;
   captions?: RawCaptions | null;
   storyboards?: RawStoryboards | null;
-  wn_has_continuation?: boolean;
   watch_next_feed?: RawFeedVideoNode[] | null;
   /** Pre-rendered DASH manifest (from a real capture); synthesised when absent. */
   dash_manifest_xml?: string;

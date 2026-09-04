@@ -202,7 +202,6 @@ async function record({ stem, id }) {
           })),
         }
       : null,
-    wn_has_continuation: Boolean(info.wn_has_continuation),
     watch_next_feed: (info.watch_next_feed ?? []).slice(0, 10).map((n) => ({
       video_id: n.video_id ?? n.id,
       title: text(n.title),
