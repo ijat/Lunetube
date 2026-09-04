@@ -74,12 +74,22 @@ export function createMainWindow(opts: CreateWindowOptions): BrowserWindow {
     minHeight: MIN_HEIGHT,
     show: false,
     frame: false,
-    backgroundColor: '#0a0d13',
+    // Real glass: a transparent base so the OS material shows through the
+    // renderer's translucent chrome. macOS uses `vibrancy` (Liquid Glass on
+    // macOS 26+); Windows 11 uses `backgroundMaterial: 'acrylic'`. Linux has no
+    // compositor API in Electron, so it keeps the opaque `#0a0d13` fallback and
+    // the renderer's in-app frost is all it gets.
+    backgroundColor: process.platform === 'darwin' ? '#00000000' : '#0a0d13',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     ...(process.platform === 'darwin'
-      ? { trafficLightPosition: { x: 14, y: (TOPBAR_H - 16) / 2 } }
+      ? {
+          trafficLightPosition: { x: 14, y: (TOPBAR_H - 16) / 2 },
+          vibrancy: 'under-window' as const,
+          visualEffectState: 'active' as const,
+        }
       : {
           titleBarOverlay: { color: '#0a0d13', symbolColor: '#cbd5e1', height: TOPBAR_H },
+          backgroundMaterial: 'acrylic' as const,
         }),
     webPreferences: {
       preload: opts.preloadPath,

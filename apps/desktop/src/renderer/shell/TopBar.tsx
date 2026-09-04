@@ -37,11 +37,12 @@ export function TopBar() {
 
   return (
     <header className="topbar">
-      {bridge().platform === 'darwin' && <div className="topbar__traffic" aria-hidden="true" />}
-
-      <NavLink to="/" className="topbar__wordmark no-drag" end>
-        Lune<span>Tube</span>
-      </NavLink>
+      <div className="topbar__zone topbar__zone--left">
+        {bridge().platform === 'darwin' && <div className="topbar__traffic" aria-hidden="true" />}
+        <NavLink to="/" className="topbar__wordmark no-drag" end>
+          Lune<span>Tube</span>
+        </NavLink>
+      </div>
 
       <form className="topbar__search no-drag" onSubmit={onSubmit} role="search">
         <Search size={16} strokeWidth={1.8} aria-hidden="true" />
@@ -54,29 +55,31 @@ export function TopBar() {
         />
       </form>
 
-      <nav className="topbar__nav no-drag">
-        {NAV.map((item) => {
-          const active = isNavActive(item.to);
-          return (
-            <Link
-              key={item.label}
-              to={item.to}
-              className={active ? 'is-active' : undefined}
-              aria-current={active ? 'page' : undefined}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <div className="topbar__zone topbar__zone--right">
+        <nav className="topbar__nav no-drag">
+          {NAV.map((item) => {
+            const active = isNavActive(item.to);
+            return (
+              <Link
+                key={item.label}
+                to={item.to}
+                className={active ? 'is-active' : undefined}
+                aria-current={active ? 'page' : undefined}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
 
-      <div className="topbar__right no-drag">
-        <NavLink to="/settings" className="topbar__icon" aria-label="Settings">
-          <Settings2 size={18} strokeWidth={1.8} />
-        </NavLink>
-        <span className="topbar__avatar" aria-hidden="true">
-          <User size={16} strokeWidth={1.8} />
-        </span>
+        <div className="topbar__right no-drag">
+          <NavLink to="/settings" className="topbar__icon" aria-label="Settings">
+            <Settings2 size={18} strokeWidth={1.8} />
+          </NavLink>
+          <span className="topbar__avatar" aria-hidden="true">
+            <User size={16} strokeWidth={1.8} />
+          </span>
+        </div>
       </div>
     </header>
   );

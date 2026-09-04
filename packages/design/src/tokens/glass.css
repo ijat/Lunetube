@@ -2,12 +2,18 @@
  * Glass / acrylic — PRD §7 blur budget: at most two stacked blur layers (root
  * backdrop + one panel layer); nested cards use flat alpha, never more blur.
  *
- * --glass-material-opacity defaults to 0.7 (PRD §7 + decision A4). Each theme
- * additionally exposes --glass-opacity-option (0.85, or 0.98 for dark-modern)
- * which the PRD §9 "glass level" setting can promote into this variable.
+ * --glass-material-opacity defaults to 0.34 — lowered from decision A4's 0.7
+ * (which assumed an opaque window) so the OS material (macOS vibrancy / Liquid
+ * Glass, Windows acrylic) reads through the chrome. Each theme still exposes
+ * --glass-opacity-option (0.85, or 0.98 for dark-modern) which the PRD §9
+ * "glass level" setting can promote into this variable for users who want
+ * more opacity back.
  */
 :root {
-  --glass-material-opacity: 0.7;
+  /* 0.34 (was 0.7 / decision A4) so the OS material — macOS vibrancy / Liquid
+   * Glass, Windows acrylic — reads through the chrome. A4's 0.7 assumed an
+   * opaque window; the "glass level" setting can still promote this upward. */
+  --glass-material-opacity: 0.34;
   --blur-root: 30px;
   --blur-panel: 18px;
   --blur-bar: 24px;
