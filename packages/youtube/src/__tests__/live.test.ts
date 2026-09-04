@@ -108,6 +108,66 @@ describe.skipIf(!LIVE)('live YouTube (LUNE_LIVE=1)', () => {
     }
   }, 30_000);
 
+  it('getChannel(<real UC id>) returns rich videos + about content', async () => {
+    const resolved = await source.resolveUrl({ url: 'https://www.youtube.com/@veritasium' });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok || resolved.value.kind !== 'channel') return;
+    const channelId = resolved.value.channelId;
+
+    const videos = await source.getChannel({ channelId, tab: 'videos' });
+    expect(videos.ok).toBe(true);
+    if (videos.ok) {
+      expect(videos.value.content.kind).toBe('videos');
+      if (videos.value.content.kind === 'videos') {
+        expect(videos.value.content.items.length).toBeGreaterThanOrEqual(10);
+      }
+      expect(videos.value.channel?.availableTabs.length).toBeGreaterThan(0);
+    }
+
+    const about = await source.getChannel({ channelId, tab: 'about' });
+    expect(about.ok).toBe(true);
+    if (about.ok) {
+      expect(about.value.content.kind).toBe('about');
+      if (about.value.content.kind === 'about') {
+        expect(about.value.content.about.description.length).toBeGreaterThan(0);
+      }
+    }
+  }, 30_000);
+
+  it('getPlaylist(<real public uploads playlist>) paginates to the end without error', async () => {
+    const resolved = await source.resolveUrl({ url: 'https://www.youtube.com/@veritasium' });
+    if (!resolved.ok || resolved.value.kind !== 'channel') {
+      throw new Error('could not resolve a real channel id to build an uploads playlist id');
+    }
+    // The standard "uploads" playlist for any channel: UC… → UU… (same suffix).
+    const uploadsId = `UU${resolved.value.channelId.slice(2)}`;
+
+    let last = await source.getPlaylist({ playlistId: uploadsId });
+    expect(last.ok).toBe(true);
+    let hops = 0;
+    // A long-running channel's uploads playlist can run to many hundreds of
+    // pages; this is a manual/local-only smoke test (never runs in CI), so the
+    // cap exists only to guarantee termination, not to bound runtime tightly.
+    while (last.ok && last.value.continuation != null && hops < 300) {
+      last = await source.getPlaylist({
+        playlistId: uploadsId,
+        continuation: last.value.continuation,
+      });
+      hops += 1;
+      expect(last.ok).toBe(true);
+    }
+    // Empirically (2026-09-04, this channel): youtubei.js' `Playlist.has_continuation`
+    // flips false exactly on the true last page, so the *end-of-list throw*
+    // (P2-F6 #3 — `mapPlaylistDetail`/`getPlaylist` catching
+    // 'Got empty continuation response…' and returning `items: []`) is not
+    // reached for every playlist; it is deterministically pinned instead by
+    // the mocked-`getContinuation` unit tests in `playlist.test.ts`. What this
+    // live test verifies is that real pagination completes without error and
+    // terminates (`continuation: undefined`), whichever ending YouTube gives us.
+    expect(last.ok).toBe(true);
+    if (last.ok) expect(last.value.continuation).toBeUndefined();
+  }, 600_000);
+
   it('resolveUrl(@handle) resolves to a channel id over the network', async () => {
     const res = await source.resolveUrl({ url: 'https://www.youtube.com/@veritasium' });
     expect(res.ok).toBe(true);

@@ -5,9 +5,9 @@
  * `youtubei.js`. Everything it returns is a plain `@lunetube/shared` DTO.
  *
  * Phase 1 scope: `getVideo`, `getStreams`, `getRelated`, `getDiagnostics`.
- * Phase 2 adds `search`, `getSearchSuggestions` and `resolveUrl` (P2-3); the
- * remaining four (`getComments`, `getCommentReplies`, `getChannel`,
- * `getPlaylist`) still return a `NOT_IMPLEMENTED` `LuneError`.
+ * Phase 2 adds `search`, `getSearchSuggestions`, `resolveUrl` (P2-3) and
+ * `getChannel`, `getPlaylist` (P2-4); the remaining two (`getComments`,
+ * `getCommentReplies`) still return a `NOT_IMPLEMENTED` `LuneError`.
  *
  * `getStreams` owns **client selection** (walking `CLIENT_LADDER`) and
  * **recovery** (session refresh on a parser break); turning one `VideoInfo`
@@ -22,7 +22,9 @@ import {
   makeLuneError,
   ok,
   type AdapterDiagnostics,
+  type ChannelAbout,
   type ChannelPage,
+  type ChannelTab,
   type Comment,
   type CommentPage,
   type LuneError,
@@ -58,6 +60,9 @@ import { InnertubeSession, youtubeiVersion, type InnertubeSessionOptions } from 
 import { mapFeedVideos, mapVideoDetail, type RawVideoInfo } from './map/video.js';
 import { mapSearchPage, toInnertubeFilters, type RawSearch } from './map/search.js';
 import { isValidChannelId, isValidPlaylistId, isValidVideoId, parseYouTubeUrl } from './map/url.js';
+import { mapAbout, mapChannelDetail, mapChannelTabContent } from './map/channel.js';
+import { mapPlaylistDetail } from './map/playlist.js';
+import { textToString, type MaybeText } from './map/util.js';
 import { ContinuationStore } from './continuations.js';
 import { ClassicDashStrategy } from '../playback/classicDash.js';
 import type { PlaybackInfo, PlaybackStrategy } from '../playback/strategy.js';
@@ -332,12 +337,189 @@ export class InnertubeYouTubeSource implements YouTubeSource {
   ): Promise<Result<Paged<Comment>, LuneError>> {
     return err(notImplemented('getCommentReplies'));
   }
-  async getChannel(_params: GetChannelParams): Promise<Result<ChannelPage, LuneError>> {
-    return err(notImplemented('getChannel'));
+  /**
+   * First page: `@handle` channel ids are resolved to a browse id via
+   * `yt.resolveURL` first (P2-F8 — `Innertube.getChannel` only accepts a
+   * browse id). The About tab short-circuits before any tab getter runs — it
+   * has no continuation and needs `getAbout()`, not `get<Tab>()`. Every other
+   * tab calls the matching `get<Tab>()` getter, each of which returns a *new*
+   * `Channel` (P2-F2).
+   *
+   * Continuation: the stored object is always a `Channel` or a
+   * `ChannelListContinuation` (P2-F2); both expose `getContinuation()` →
+   * a new `ChannelListContinuation`, which carries no header of its own.
+   */
+  async getChannel(params: GetChannelParams): Promise<Result<ChannelPage, LuneError>> {
+    if (params.continuation !== undefined) {
+      const stored = this.#continuations.get('channel', params.continuation);
+      if (stored === undefined) {
+        return err(
+          makeLuneError('INVALID_INPUT', 'This channel list refreshed. Reload to keep browsing.', {
+            detail: 'continuation:channel',
+          }),
+        );
+      }
+      return this.#guard(async () => {
+        const next = await (stored as { getContinuation(): Promise<unknown> }).getContinuation();
+        return ok(this.#channelListPage(params.tab, next, undefined));
+      });
+    }
+
+    const channelId = normalizeChannelId(params.channelId);
+    if (channelId == null) {
+      return err(makeLuneError('INVALID_INPUT', 'Not a valid channel id or handle.'));
+    }
+
+    const tab = params.tab;
+    return this.#guard(async (yt) => {
+      const browseId = channelId.startsWith('@')
+        ? await this.#resolveHandle(yt, channelId)
+        : channelId;
+      if (browseId == null) {
+        return err(
+          makeLuneError('YT_UNAVAILABLE', 'This channel could not be found.', {
+            detail: 'resolve:@handle',
+          }),
+        );
+      }
+      const ch = await yt.getChannel(browseId);
+      const detail = mapChannelDetail(ch, this.#rewriteImage);
+
+      if (tab === 'about') {
+        return ok({
+          channel: detail,
+          tab,
+          content: { kind: 'about', about: await this.#resolveAbout(ch) },
+        });
+      }
+
+      const untyped = ch as unknown as Record<string, unknown>;
+      if (untyped[TAB_HAS_FLAG[tab]] !== true) {
+        return err(
+          makeLuneError('YT_UNAVAILABLE', `This channel has no "${tab}" tab.`, {
+            detail: `tab:${tab}`,
+          }),
+        );
+      }
+      const getTab = untyped[TAB_GETTER[tab]];
+      if (typeof getTab !== 'function') {
+        return err(
+          makeLuneError('YT_PARSE_CHANGED', `Channel has no "${TAB_GETTER[tab]}" method.`, {
+            detail: `tab:${tab}`,
+          }),
+        );
+      }
+      const feed = await (getTab as () => Promise<unknown>).call(ch);
+      return ok(this.#channelListPage(tab, feed, detail));
+    });
   }
-  async getPlaylist(_params: GetPlaylistParams): Promise<Result<PlaylistDetail, LuneError>> {
-    return err(notImplemented('getPlaylist'));
+
+  #channelListPage(
+    tab: ChannelTab,
+    feed: unknown,
+    detail: ReturnType<typeof mapChannelDetail> | undefined,
+  ): ChannelPage {
+    const content = mapChannelTabContent(tab, feed, this.#rewriteImage);
+    const page: ChannelPage =
+      detail !== undefined ? { channel: detail, tab, content } : { tab, content };
+    if ((feed as { has_continuation?: unknown }).has_continuation === true) {
+      page.continuation = this.#continuations.put('channel', feed);
+    }
+    return page;
   }
+
+  /**
+   * `@handle` → browse id via `yt.resolveURL` (P2-F8). `null` when the handle
+   * cannot be resolved to a valid channel id.
+   */
+  async #resolveHandle(yt: Innertube, handle: string): Promise<string | null> {
+    const endpoint = await yt.resolveURL(`https://www.youtube.com/${handle}`);
+    const browseId = (endpoint as { payload?: { browseId?: unknown } } | null)?.payload?.browseId;
+    return typeof browseId === 'string' && isValidChannelId(browseId) ? browseId : null;
+  }
+
+  /**
+   * `Channel.getAbout()` returns one of two shapes (`ChannelAboutFullMetadata`
+   * or `AboutChannel`) or throws `'About not found'` when the channel has no
+   * about surface at all (P2-F6). About is a secondary tab, so any failure —
+   * not just that specific message — degrades to the channel metadata's
+   * description rather than failing the whole page.
+   */
+  async #resolveAbout(ch: unknown): Promise<ChannelAbout> {
+    const fallback = textToString(
+      (ch as { metadata?: { description?: unknown } } | null)?.metadata?.description as MaybeText,
+    );
+    try {
+      const raw = await (ch as { getAbout(): Promise<unknown> }).getAbout();
+      return mapAbout(raw, fallback);
+    } catch {
+      return mapAbout(null, fallback);
+    }
+  }
+
+  /**
+   * First page: `yt.getPlaylist(id)` (no `VL` prefixing — youtubei.js already
+   * does that, P2-F8). The `Playlist` constructor throws a specific message on
+   * the last page (`'Got empty continuation response...'`, P2-F6 #3) — that is
+   * a normal end-of-list condition, not an error, so it is caught here and
+   * turned into an empty `ok` page instead of reaching `#guard`'s generic
+   * error mapping.
+   */
+  async getPlaylist(params: GetPlaylistParams): Promise<Result<PlaylistDetail, LuneError>> {
+    const playlistId = normalizePlaylistId(params.playlistId);
+    if (playlistId == null) return err(makeLuneError('INVALID_INPUT', 'Not a valid playlist id.'));
+
+    if (params.continuation !== undefined) {
+      const stored = this.#continuations.get('playlist', params.continuation);
+      if (stored === undefined) {
+        return err(
+          makeLuneError('INVALID_INPUT', 'This playlist refreshed. Reload to keep browsing.', {
+            detail: 'continuation:playlist',
+          }),
+        );
+      }
+      return this.#guard(() =>
+        this.#nextPlaylistPage(
+          () => (stored as { getContinuation(): Promise<unknown> }).getContinuation(),
+          playlistId,
+        ),
+      );
+    }
+
+    return this.#guard((yt) =>
+      this.#nextPlaylistPage(() => yt.getPlaylist(playlistId), playlistId),
+    );
+  }
+
+  async #nextPlaylistPage(
+    fetch: () => Promise<unknown>,
+    playlistId: string,
+  ): Promise<Result<PlaylistDetail, LuneError>> {
+    let pl: unknown;
+    try {
+      pl = await fetch();
+    } catch (e) {
+      if (isEndOfPlaylist(e)) {
+        return ok({
+          id: playlistId,
+          title: '',
+          thumbnailUrl: null,
+          videoCount: null,
+          description: '',
+          author: null,
+          lastUpdatedText: null,
+          items: [],
+        });
+      }
+      throw e;
+    }
+    const detail = mapPlaylistDetail(pl, playlistId, this.#rewriteImage);
+    if ((pl as { has_continuation?: unknown }).has_continuation === true) {
+      detail.continuation = this.#continuations.put('playlist', pl);
+    }
+    return ok(detail);
+  }
+
   /**
    * Local parse first (`parseYouTubeUrl`, offline, host-allow-listed); the
    * network (`yt.resolveURL`) is only reached for a `/@handle` / `/c/` /
@@ -385,6 +567,47 @@ function invalidId(): LuneError {
 
 function parseChanged(detail: string): LuneError {
   return makeLuneError('YT_PARSE_CHANGED', 'YouTube returned an unexpected shape.', { detail });
+}
+
+/** A `UC…` id, an `@handle`, or an unqualified vanity id (plan P2-4), ≤ 64 chars. */
+function normalizeChannelId(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed.length > 64) return null;
+  return /^(UC[\w-]{22}|@[\w.-]{3,30}|[\w-]{2,64})$/.test(trimmed) ? trimmed : null;
+}
+
+function normalizePlaylistId(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return isValidPlaylistId(trimmed) ? trimmed : null;
+}
+
+/** The five non-about `ChannelTab`s → the `Channel.has_*` boolean that guards them. */
+const TAB_HAS_FLAG: Record<Exclude<ChannelTab, 'about'>, string> = {
+  videos: 'has_videos',
+  shorts: 'has_shorts',
+  playlists: 'has_playlists',
+  live: 'has_live_streams',
+  podcasts: 'has_podcasts',
+};
+
+/** The five non-about `ChannelTab`s → the `Channel` getter that fetches them (P2-4). */
+const TAB_GETTER: Record<Exclude<ChannelTab, 'about'>, string> = {
+  videos: 'getVideos',
+  shorts: 'getShorts',
+  playlists: 'getPlaylists',
+  live: 'getLiveStreams',
+  podcasts: 'getPodcasts',
+};
+
+/**
+ * `Playlist`'s constructor throws this exact message on the last page
+ * (`youtube/Playlist.js:36-38`) — a normal end-of-list condition surfaced as a
+ * throw (P2-F6 #3), not a real error.
+ */
+function isEndOfPlaylist(e: unknown): boolean {
+  return e instanceof Error && /empty continuation response/i.test(e.message);
 }
 
 /** Trim, drop empties / over-long / duplicates, cap at 12 (plan P2-3). */

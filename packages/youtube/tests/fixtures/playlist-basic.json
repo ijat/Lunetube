@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "playlistId": "PLbasic00000000000000000001",
+    "continuation": "playlist-page2",
+    "note": "Hand-authored first page."
+  },
+  "info": {
+    "title": "Study Mix",
+    "description": "A collection of focus tracks.",
+    "author": {
+      "id": "UC1111111111111111111111",
+      "name": "Lofi Girl",
+      "thumbnails": [{ "url": "https://yt3.ggpht.com/lofigirl.jpg", "width": 176, "height": 176 }]
+    },
+    "thumbnails": [{ "url": "https://i.ytimg.com/vi/vid1/hq.jpg", "width": 480, "height": 360 }],
+    "total_items": "48",
+    "views": "1,234,567 views",
+    "last_updated": "Updated yesterday"
+  },
+  "videos": [
+    {
+      "type": "PlaylistVideo",
+      "video_id": "plvid0000001",
+      "title": { "text": "Track 1" },
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/plvid1/hq.jpg", "width": 480, "height": 360 }
+      ],
+      "author": { "id": "UC1111111111111111111111", "name": "Lofi Girl" },
+      "short_view_count": { "text": "100K views" },
+      "length_text": { "text": "3:00" }
+    },
+    {
+      "type": "PlaylistVideo",
+      "video_id": "plvid0000002",
+      "title": { "text": "Track 2" },
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/plvid2/hq.jpg", "width": 480, "height": 360 }
+      ],
+      "author": { "id": "UC1111111111111111111111", "name": "Lofi Girl" },
+      "short_view_count": { "text": "90K views" },
+      "length_text": { "text": "3:30" }
+    }
+  ]
+}

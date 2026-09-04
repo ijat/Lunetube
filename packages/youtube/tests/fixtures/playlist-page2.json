@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "continuation": "playlist-end",
+    "note": "Continuation page — no header (plan P2-4)."
+  },
+  "videos": [
+    {
+      "type": "PlaylistVideo",
+      "video_id": "plvid0000003",
+      "title": { "text": "Track 3" },
+      "short_view_count": { "text": "50K views" },
+      "length_text": { "text": "2:45" }
+    }
+  ]
+}

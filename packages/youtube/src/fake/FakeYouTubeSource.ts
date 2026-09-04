@@ -14,7 +14,9 @@ import {
   makeLuneError,
   ok,
   type AdapterDiagnostics,
+  type ChannelAbout,
   type ChannelPage,
+  type ChannelTab,
   type Comment,
   type CommentPage,
   type LuneError,
@@ -43,7 +45,15 @@ import { CLIENT_LADDER, ladderSkipReason } from '../innertube/clients.js';
 import { mapPlayabilityStatus, notImplemented } from '../innertube/errors.js';
 import { mapFeedVideos, mapVideoDetail } from '../innertube/map/video.js';
 import { mapSearchPage, type RawSearch } from '../innertube/map/search.js';
+import {
+  mapAbout,
+  mapChannelDetail,
+  mapChannelTabContent,
+  type RawChannel,
+} from '../innertube/map/channel.js';
+import { mapPlaylistDetail, type RawPlaylistInfo } from '../innertube/map/playlist.js';
 import { parseYouTubeUrl } from '../innertube/map/url.js';
+import { textToString, type MaybeText } from '../innertube/map/util.js';
 import { ClassicDashStrategy } from '../playback/classicDash.js';
 import type {
   DashRequest,
@@ -78,6 +88,49 @@ interface SuggestionsFixture {
   suggestions: string[];
 }
 
+/** A channel node — `RawChannel` plus the top-level `has_*` booleans `mapChannelDetail` reads off `ch` itself. */
+interface ChannelNode extends RawChannel {
+  has_videos?: boolean;
+  has_shorts?: boolean;
+  has_playlists?: boolean;
+  has_live_streams?: boolean;
+  has_podcasts?: boolean;
+  has_about?: boolean;
+}
+
+/** A `channel-*.json` fixture: one (channelId, tab) response, hand-authored. */
+interface ChannelFixture {
+  meta?: {
+    channelId?: string;
+    tab?: string;
+    /** Full composite key `channelId|tab` for an exact match. */
+    key?: string;
+    /** Stem of the next `channel-*.json` fixture — served as the opaque continuation. */
+    continuation?: string;
+    note?: string;
+  };
+  /** Present only on a first page (a continuation response carries no header). */
+  channel?: ChannelNode;
+  /** The tab's feed — absent for `tab: 'about'`. */
+  feed?: { videos?: unknown[]; playlists?: unknown[] };
+  /** `getAbout()`'s result — present only for `tab: 'about'`; `null`/absent simulates the "About not found" throw. */
+  about?: unknown;
+}
+
+/** A `playlist-*.json` fixture: `RawPlaylist`-shaped, hand-authored. */
+interface PlaylistFixture {
+  meta?: {
+    playlistId?: string;
+    /** Stem of the next `playlist-*.json` fixture. */
+    continuation?: string;
+    /** This fixture simulates the constructor's end-of-list throw (P2-F6 #3). */
+    endOfList?: boolean;
+    note?: string;
+  };
+  info?: RawPlaylistInfo;
+  videos?: unknown[];
+}
+
 export interface FakeYouTubeSourceOptions {
   /** Directory of `video-*.json` fixtures. Defaults to the package's own. */
   fixturesDir?: string;
@@ -89,6 +142,8 @@ export class FakeYouTubeSource implements YouTubeSource {
   readonly #fixtures: Map<string, VideoFixture>;
   readonly #searchFixtures: Map<string, SearchFixture>;
   readonly #suggestionFixtures: Map<string, SuggestionsFixture>;
+  readonly #channelFixtures: Map<string, ChannelFixture>;
+  readonly #playlistFixtures: Map<string, PlaylistFixture>;
   readonly #media: UrlRewriter;
   readonly #image: UrlRewriter;
   readonly #caption: UrlRewriter;
@@ -101,6 +156,8 @@ export class FakeYouTubeSource implements YouTubeSource {
     this.#fixtures = loadVideoFixtures(dir);
     this.#searchFixtures = loadFixturesByPrefix<SearchFixture>('search-', dir);
     this.#suggestionFixtures = loadFixturesByPrefix<SuggestionsFixture>('suggestions-', dir);
+    this.#channelFixtures = loadFixturesByPrefix<ChannelFixture>('channel-', dir);
+    this.#playlistFixtures = loadFixturesByPrefix<PlaylistFixture>('playlist-', dir);
     this.#media = opts.rewriters?.media ?? identityRewriter;
     this.#image = opts.rewriters?.image ?? identityRewriter;
     this.#caption = opts.rewriters?.caption ?? identityRewriter;
@@ -250,12 +307,104 @@ export class FakeYouTubeSource implements YouTubeSource {
   ): Promise<Result<Paged<Comment>, LuneError>> {
     return err(notImplemented('getCommentReplies'));
   }
-  async getChannel(_params: GetChannelParams): Promise<Result<ChannelPage, LuneError>> {
-    return err(notImplemented('getChannel'));
+  async getChannel(params: GetChannelParams): Promise<Result<ChannelPage, LuneError>> {
+    if (params.continuation !== undefined) {
+      const fx = this.#channelFixtures.get(params.continuation);
+      if (fx == null) {
+        return err(
+          makeLuneError('INVALID_INPUT', 'This channel list refreshed. Reload to keep browsing.', {
+            detail: 'continuation:channel',
+          }),
+        );
+      }
+      return ok(this.#channelPage(params.tab, fx, false));
+    }
+
+    const key = `${params.channelId}|${params.tab}`;
+    const values = [...this.#channelFixtures.values()];
+    const fx =
+      values.find((x) => x.meta?.key === key) ??
+      values.find((x) => x.meta?.channelId === params.channelId && x.meta?.tab === params.tab);
+    if (fx == null) {
+      return err(
+        makeLuneError(
+          'YT_UNAVAILABLE',
+          `No channel fixture for "${params.channelId}" tab "${params.tab}".`,
+          {
+            detail: 'fake',
+            hint: 'Add packages/youtube/tests/fixtures/channel-*.json',
+          },
+        ),
+      );
+    }
+    return ok(this.#channelPage(params.tab, fx, true));
   }
-  async getPlaylist(_params: GetPlaylistParams): Promise<Result<PlaylistDetail, LuneError>> {
-    return err(notImplemented('getPlaylist'));
+
+  #channelPage(tab: ChannelTab, fx: ChannelFixture, withHeader: boolean): ChannelPage {
+    const channelNode: ChannelNode = fx.channel ?? {};
+    const content =
+      tab === 'about'
+        ? { kind: 'about' as const, about: this.#channelAbout(channelNode, fx.about) }
+        : mapChannelTabContent(tab, fx.feed ?? {}, this.#image);
+    const page: ChannelPage = withHeader
+      ? { channel: mapChannelDetail(channelNode, this.#image), tab, content }
+      : { tab, content };
+    const next = fx.meta?.continuation;
+    if (typeof next === 'string' && next.length > 0) page.continuation = next;
+    return page;
   }
+
+  #channelAbout(channelNode: ChannelNode, about: unknown): ChannelAbout {
+    const fallback = textToString(channelNode.metadata?.description as MaybeText);
+    return mapAbout(about ?? null, fallback);
+  }
+
+  async getPlaylist(params: GetPlaylistParams): Promise<Result<PlaylistDetail, LuneError>> {
+    if (params.continuation !== undefined) {
+      const fx = this.#playlistFixtures.get(params.continuation);
+      if (fx == null) {
+        return err(
+          makeLuneError('INVALID_INPUT', 'This playlist refreshed. Reload to keep browsing.', {
+            detail: 'continuation:playlist',
+          }),
+        );
+      }
+      if (fx.meta?.endOfList === true) {
+        return ok({
+          id: params.playlistId,
+          title: '',
+          thumbnailUrl: null,
+          videoCount: null,
+          description: '',
+          author: null,
+          lastUpdatedText: null,
+          items: [],
+        });
+      }
+      return ok(this.#playlistPage(fx, params.playlistId));
+    }
+
+    const fx = [...this.#playlistFixtures.values()].find(
+      (x) => x.meta?.playlistId === params.playlistId,
+    );
+    if (fx == null) {
+      return err(
+        makeLuneError('YT_UNAVAILABLE', `No playlist fixture for "${params.playlistId}".`, {
+          detail: 'fake',
+          hint: 'Add packages/youtube/tests/fixtures/playlist-*.json',
+        }),
+      );
+    }
+    return ok(this.#playlistPage(fx, params.playlistId));
+  }
+
+  #playlistPage(fx: PlaylistFixture, playlistId: string): PlaylistDetail {
+    const detail = mapPlaylistDetail(fx, playlistId, this.#image);
+    const next = fx.meta?.continuation;
+    if (typeof next === 'string' && next.length > 0) detail.continuation = next;
+    return detail;
+  }
+
   async resolveUrl(params: { url: string }): Promise<Result<NavTarget, LuneError>> {
     const raw = typeof params.url === 'string' ? params.url.trim() : '';
     const local = parseYouTubeUrl(raw);
