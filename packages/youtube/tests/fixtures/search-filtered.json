@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "query": "lofi",
+    "key": "lofi|views|month|short|video",
+    "note": "Hand-authored. Filtered search (View count sort, month, short, video type)."
+  },
+  "estimated_results": 4200,
+  "has_continuation": false,
+  "results": [
+    {
+      "type": "Video",
+      "video_id": "filt11111111",
+      "title": { "text": "Short Lofi Loop (1 min)" },
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/filt11111111/hqdefault.jpg", "width": 480, "height": 360 }
+      ],
+      "author": { "id": "UC3333333333333333333333", "name": "Beat Maker" },
+      "short_view_count": { "text": "88K views" },
+      "published": { "text": "3 weeks ago" },
+      "length_text": { "text": "0:59" },
+      "is_live": false
+    },
+    {
+      "type": "Video",
+      "video_id": "filt22222222",
+      "title": { "text": "Two Minute Study Beat" },
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/filt22222222/hqdefault.jpg", "width": 480, "height": 360 }
+      ],
+      "author": { "id": "UC4444444444444444444444", "name": "Study Vibes" },
+      "short_view_count": { "text": "12K views" },
+      "published": { "text": "2 weeks ago" },
+      "length_text": { "text": "2:03" },
+      "is_live": false
+    }
+  ]
+}

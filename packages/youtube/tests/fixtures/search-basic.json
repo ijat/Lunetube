@@ -1,0 +1,124 @@
+{
+  "meta": {
+    "query": "lofi",
+    "key": "lofi|relevance|any|any|all",
+    "continuation": "search-page2",
+    "note": "Hand-authored. Mixed result kinds + one unknown node + one shelf."
+  },
+  "estimated_results": 1000000,
+  "has_continuation": true,
+  "results": [
+    {
+      "type": "Video",
+      "video_id": "abc12345678",
+      "title": { "text": "Lofi Hip Hop Radio" },
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/abc12345678/hqdefault.jpg", "width": 480, "height": 360 }
+      ],
+      "author": {
+        "id": "UC1111111111111111111111",
+        "name": "Lofi Girl",
+        "thumbnails": [{ "url": "https://yt3.ggpht.com/lofigirl.jpg", "width": 176, "height": 176 }]
+      },
+      "short_view_count": { "text": "1.2M views" },
+      "published": { "text": "2 years ago" },
+      "length_text": { "text": "3:24" },
+      "is_live": false
+    },
+    {
+      "type": "LockupView",
+      "content_type": "VIDEO",
+      "content_id": "lockvid1234",
+      "metadata": {
+        "title": { "text": "Deep Focus Mix" },
+        "metadata": {
+          "metadata_rows": [
+            {
+              "metadata_parts": [
+                {
+                  "text": { "text": "FocusChannel" },
+                  "avatar_stack": {
+                    "avatars": [
+                      {
+                        "image": [
+                          { "url": "https://yt3.ggpht.com/focus.jpg", "width": 88, "height": 88 }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "metadata_parts": [
+                { "text": { "text": "820K views" } },
+                { "text": { "text": "1 month ago" } }
+              ]
+            }
+          ]
+        }
+      },
+      "content_image": {
+        "primary_thumbnail": {
+          "image": [
+            { "url": "https://i.ytimg.com/vi/lockvid1234/hq720.jpg", "width": 720, "height": 404 }
+          ],
+          "overlays": [{ "badges": [{ "text": "12:00" }] }]
+        }
+      }
+    },
+    {
+      "type": "ShortsLockupView",
+      "on_tap_endpoint": { "payload": { "videoId": "short1234567" } },
+      "overlay_metadata": {
+        "primary_text": { "text": "Quick lofi loop" },
+        "secondary_text": { "text": "500K views" }
+      },
+      "thumbnail": [
+        { "url": "https://i.ytimg.com/vi/short1234567/oardefault.jpg", "width": 405, "height": 720 }
+      ]
+    },
+    {
+      "type": "Channel",
+      "id": "UC2222222222222222222222",
+      "author": {
+        "id": "UC2222222222222222222222",
+        "name": "Chillhop Music",
+        "thumbnails": [
+          { "url": "https://yt3.ggpht.com/chillhop.jpg", "width": 176, "height": 176 }
+        ],
+        "is_verified": true
+      },
+      "subscriber_count": { "text": "3.2M subscribers" },
+      "video_count": { "text": "1.1K videos" },
+      "description_snippet": { "text": "Jazzy & lofi hip hop beats to relax/study to." }
+    },
+    {
+      "type": "GridPlaylist",
+      "id": "PLlofi1234567",
+      "title": { "text": "Lofi Essentials" },
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/pllofi/hqdefault.jpg", "width": 480, "height": 360 }
+      ],
+      "video_count_short": { "text": "50" }
+    },
+    { "type": "AdSlot" },
+    {
+      "type": "Shelf",
+      "title": { "text": "For you" },
+      "content": {
+        "items": [
+          {
+            "type": "Video",
+            "video_id": "shelfvid0001",
+            "title": { "text": "Shelf Video One" },
+            "thumbnails": [
+              { "url": "https://i.ytimg.com/vi/shelfvid0001/hq.jpg", "width": 480, "height": 360 }
+            ],
+            "short_view_count": { "text": "10K views" }
+          }
+        ]
+      }
+    }
+  ]
+}

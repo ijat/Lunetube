@@ -49,3 +49,25 @@ export function loadVideoFixtures(dir: string = defaultFixturesDir()): Map<strin
 export function loadVideoFixture(stem: string, dir: string = defaultFixturesDir()): VideoFixture {
   return JSON.parse(readFileSync(`${dir}/${stem}.json`, 'utf8')) as VideoFixture;
 }
+
+/** Load one JSON fixture by file stem, typed by the caller. Throws if missing. */
+export function loadJsonFixture<T>(stem: string, dir: string = defaultFixturesDir()): T {
+  return JSON.parse(readFileSync(`${dir}/${stem}.json`, 'utf8')) as T;
+}
+
+/**
+ * Load every `<prefix>*.json` fixture in `dir`, keyed by file stem
+ * (e.g. `loadFixturesByPrefix('search-')` → `Map { 'search-basic' → …, … }`).
+ */
+export function loadFixturesByPrefix<T>(
+  prefix: string,
+  dir: string = defaultFixturesDir(),
+): Map<string, T> {
+  const out = new Map<string, T>();
+  for (const entry of readdirSync(dir)) {
+    if (!entry.startsWith(prefix) || !entry.endsWith('.json')) continue;
+    const stem = entry.slice(0, -'.json'.length);
+    out.set(stem, JSON.parse(readFileSync(`${dir}/${entry}`, 'utf8')) as T);
+  }
+  return out;
+}
