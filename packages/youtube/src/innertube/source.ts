@@ -51,7 +51,6 @@ import {
   type ClientCapabilities,
   type InnerTubeClient,
 } from './clients.js';
-import { ContinuationStore } from './continuations.js';
 import { mapPlayabilityStatus, mapYoutubeError, notImplemented } from './errors.js';
 import { InnertubeSession, youtubeiVersion, type InnertubeSessionOptions } from './session.js';
 import { mapFeedVideos, mapVideoDetail, type RawVideoInfo } from './map/video.js';
@@ -100,7 +99,6 @@ export class InnertubeYouTubeSource implements YouTubeSource {
   readonly #rewriteMedia: (url: URL) => URL;
   readonly #rewriteImage: (url: URL) => URL;
   readonly #rewriteCaption: (url: URL) => URL;
-  readonly #related = new ContinuationStore();
   readonly #ladder = new Map<InnerTubeClient, LadderState>();
   readonly #strategy: PlaybackStrategy;
   #lastClient: string | null = null;
@@ -234,22 +232,18 @@ export class InnertubeYouTubeSource implements YouTubeSource {
   }
 
   /**
-   * KNOWN LIMITATION (F13, Phase 2 decision): `getWatchNextContinuation()`
-   * mutates and returns the *same* `VideoInfo` (`this.watch_next_feed` is
-   * replaced in place). We mint a new handle for it here while the previous
-   * handle still points at the same object — so every previously-issued related
-   * handle now resolves to the newest page. Pagination itself is correct (the
-   * feed is replaced, not accumulated), but a client holding an older handle (a
-   * back-nav, a retry) silently gets the wrong page. A proper fix — reuse the
-   * existing handle when object identity is unchanged — is deferred to Phase 2
-   * when `yt:related` paging actually ships.
+   * The up-next rail is a single ~20-item page — no "load more" (decisions A13,
+   * the F13 fix). `VideoInfo.getWatchNextContinuation()` replaces
+   * `watch_next_feed` on `this` in place and returns `this`
+   * (`youtube/VideoInfo.js:171-186`), so it is the one non-idempotent
+   * continuation in the whole Phase-2 surface: a retry / back-nav /
+   * StrictMode double-invoke would silently advance the cursor. Rather than
+   * paginate it we drop pagination; `GetRelatedParams` and
+   * `IpcRequests['yt:related']` carry no `continuation` field.
    */
   #pageFromWatchNext(info: unknown): Paged<VideoSummary> {
     const feed = (info as { watch_next_feed?: unknown }).watch_next_feed;
-    const items = mapFeedVideos(feed as never, this.#rewriteImage);
-    const hasMore = (info as { wn_has_continuation?: unknown }).wn_has_continuation === true;
-    if (!hasMore) return { items };
-    return { items, continuation: this.#related.put(info) };
+    return { items: mapFeedVideos(feed as never, this.#rewriteImage) };
   }
 
   /**
