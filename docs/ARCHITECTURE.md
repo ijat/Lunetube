@@ -107,6 +107,67 @@ Because youtubei.js returns live class instances that can't cross
 `structuredClone`, the adapter returns plain DTOs plus **opaque continuation
 handles**; main keeps a small TTL'd LRU so pagination still works.
 
+### Continuation handles (Phase 2 / decision A13)
+
+`packages/youtube/src/innertube/continuations.ts`. A handle is
+`` `${kind}:${uuid}` `` for `kind ∈ {search, comments, replies-first,
+replies-more, channel, playlist}`. The store is **main-side only and never
+persisted** — it is process memory with a **30 min TTL** and a **cap of 100**
+entries (LRU eviction). Properties that matter:
+
+- `get(kind, handle)` returns `undefined` unless the handle's prefix matches the
+  channel's `kind`. Handles are untrusted renderer input (A9); feeding a
+  `yt:comments` handle to `yt:channel` would otherwise land as a `TypeError`
+  deep inside youtubei.js. A stale / expired / forged handle comes back as
+  `INVALID_INPUT` with `detail: 'continuation:<kind>'`, which the renderer's
+  `isStaleContinuation()` turns into a "this list refreshed — reload" affordance.
+- A `WeakMap<object, Map<kind, handle>>` dedupes by object identity: `put`ing
+  the same live feed object under the same kind returns the **existing** handle
+  rather than minting a second one.
+- **`yt:related` has no handle at all.** `VideoInfo.getWatchNextContinuation()`
+  returns `this` after replacing `watch_next_feed` **in place**
+  (`VideoInfo.js:171-186`), so any handle over it silently advances a hidden
+  cursor on a retry, a back-navigation or a StrictMode double-invoke — the F13
+  bug. It was the only such aliasing continuation in the whole Phase-2 surface,
+  so up-next was made a single ~20-item page (`GetRelatedParams` /
+  `IpcRequests['yt:related']` carry no `continuation`) and the store was hardened
+  for the six kinds that remain.
+
+### IPC surface added in Phase 2 (`apps/desktop/src/main/ipc/youtube.ts`)
+
+Seven `defineHandler` registrations, each forwarding a **validated** payload
+straight to the matching `YouTubeSource` method. Every validator rejects with
+`INVALID_INPUT` and never calls the source on bad input:
+
+| channel                | validator(s)                                                                                                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `yt:search`            | `requireSearchQuery` (1–256, trimmed) · `coerceSearchFilters` (field-by-field from `DEFAULT_SEARCH_FILTERS`, unknown keys dropped) · `requireContinuation` (optional, ≤128) |
+| `yt:searchSuggestions` | `requireSuggestionQuery` (1–100, trimmed)                                                                                                                                   |
+| `yt:comments`          | `requireVideoId` · `requireCommentSort` (∈ `top`/`newest`, default `top`) · `requireContinuation`                                                                           |
+| `yt:commentReplies`    | `requireBoundedString('handle', 128)` — the opaque `replies-first:` / `replies-more:` handle (A17)                                                                          |
+| `yt:channel`           | `requireBoundedString('channelId', 64)` · `requireChannelTab` (∈ the 6 `ChannelTab` literals) · `requireContinuation`                                                       |
+| `yt:playlist`          | `requireBoundedString('playlistId', 64)` · `requireContinuation`                                                                                                            |
+| `yt:resolveUrl`        | `requireUrl` (1–2048)                                                                                                                                                       |
+
+**Preload is not touched** — the invoke allow-list is derived from `CHANNELS`
+(`new Set(Object.values(CHANNELS))`), so a new channel name is enough.
+
+### `resolveUrl` — anchored host allow-list, allow-list before fallback
+
+`packages/youtube/src/innertube/map/url.ts`. `parseYouTubeUrl` runs
+**locally first** and only against an **anchored** host allow-list matched on
+`new URL(raw).hostname` (never `endsWith`, which `youtube.com.evil.com` defeats):
+`^(www\.|m\.|music\.)?youtube\.com$`, `^youtu\.be$`,
+`^(www\.)?youtube-nocookie\.com$`. It also rejects userinfo (`user@host`), a
+non-`http(s)` scheme, and a length over 2048. Only after a URL clears that gate
+is a network hop considered — a `/@handle` / `/c/` / `/user/` path returns
+`null` locally and `source.ts` resolves it via `yt.resolveURL` and
+**re-validates** the returned `videoId` / `playlistId` / `browseId`. A
+non-allow-listed host returns `{ kind: 'unknown' }` with **no network at all**;
+a bare phrase returns `{ kind: 'search' }`. The renderer's paste-a-URL path
+falls through `unknown` / `search` / any thrown error to an ordinary search —
+never a dead end.
+
 ## Media path (Phase 1, design fixed now)
 
 Metadata runs in main (Node `fetch` sends no `Origin`, no CORS). Media bytes
@@ -120,6 +181,19 @@ and `timedtext` captions. Host matching is anchored-regex against
 Playback strategy is behind a `PlaybackStrategy` seam: `ClassicDashStrategy`
 (IOS client → `toDash()` → shaka) is the only Phase 1 implementation; `SabrStrategy`
 is a named, empty slot.
+
+### Network egress hosts
+
+Everything the app talks to, all from **main** (renderer egress is CSP-pinned to
+`'self'` + `http://127.0.0.1:*`):
+
+| host                                                       | who              | what                                                                                                |
+| ---------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------- |
+| `www.youtube.com` / `youtubei` endpoint                    | youtubei.js      | InnerTube metadata (search, video, comments, channel, playlist)                                     |
+| `*.googlevideo.com`                                        | proxy `/media`   | adaptive media segments                                                                             |
+| `i*.ytimg.com`, `yt*.ggpht.com`, `*.googleusercontent.com` | proxy `/img`     | thumbnails + avatars (disk-cached, same-origin for canvas)                                          |
+| `www.youtube.com/api/timedtext`                            | proxy `/caption` | caption tracks                                                                                      |
+| `suggestqueries-clients6.youtube.com`                      | youtubei.js      | **added in Phase 2** — search-suggestion autocomplete (`getSearchSuggestions` → `/complete/search`) |
 
 ### Player core (P1-5) — `apps/desktop/src/renderer/player/`
 
@@ -171,6 +245,32 @@ branch, and sidesteps Chromium's autoplay policy.
 > pixels) only for a `127.0.0.1` URL, else they fall back to a gradient
 > placeholder. Proxying is also what keeps the colour-extraction canvas
 > untainted (the `/img` route sets `Access-Control-Allow-Origin`).
+
+## List virtualization (Phase 2 / decisions A19, P2-F11)
+
+Long lists (search results, channel tabs, comments, Home shelves) are windowed
+with `@tanstack/react-virtual` (bundled — `apps/desktop` keeps its no-runtime-deps
+rule). The contract:
+
+- **One scroller for the whole app.** `.stage__content` in `AppFrame` is the
+  only scrollable element. `ScrollContainerProvider` publishes it through
+  context (as _state_, not a bare ref — a descendant's layout effect can run
+  before `<main>`'s ref is attached). A virtualizer **never** nests its own
+  scrollbox.
+- **`scrollMargin`.** Because the virtualized area is partway down the shared
+  scroller, each virtualizer measures
+  `round(sizerRect.top − scrollerRect.top − scroller.clientTop + scroller.scrollTop)`
+  on every commit (plus a `ResizeObserver` on the sizer and on the scroller) and
+  positions rows at `translateY(item.start − scrollMargin)` inside a
+  `height: getTotalSize()` sizer. Multiple virtualizers on one page (the two
+  Home shelves) each carry their own margin.
+- **Stable keys.** `flattenComments` derives every row key from a comment id,
+  never an index: `@tanstack/virtual-core` keys its measured-height cache by
+  `getItemKey(index)`, so a splice (expanding a thread mid-list) must not shift
+  keys or the list jumps.
+- **Not testable in jsdom** (no layout) — pure helpers (`columnsForWidth`,
+  `flattenComments`) are unit-tested; real windowing/anchoring behaviour is
+  covered in Playwright (`tests/e2e/browse.spec.ts`).
 
 ## Design system
 
@@ -233,6 +333,19 @@ The safety property: `backgroundColor` is only transparent on macOS, where
 vibrancy is guaranteed to be available. Everywhere else it is the opaque
 `--void`, so a missing/unsupported compositor material can only ever fall back
 to a solid dark window.
+
+## What is not built yet
+
+| area                                                  | state after Phase 2                                                                                                                                                                                              | lands in                                                                                                                                 |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Persistence**                                       | None. "Continue watching" is a session-scoped in-memory store (`renderer/stores/recentStore.ts`, cap 10) that empties on quit and says so in the UI. No history, follows, Watch Later, local playlists or queue. | Phase 3 (SQLite via `db:*`; the Home shelf's data source swaps to `db:history` with no layout change)                                    |
+| **"Latest from followed"**                            | A labelled placeholder on Home. Not faked — the follows table does not exist and the fan-out needs its own rate-limiting design.                                                                                 | Phase 3                                                                                                                                  |
+| **Follow / like / Save / autoplay-next / "Play all"** | Visible where they belong but **disabled with a reason** — never present-and-inert.                                                                                                                              | Phase 3                                                                                                                                  |
+| **Live playback**                                     | Cards show a LIVE badge; the watch route gives a precise "live streams are not playable yet" state. `toDash()` provably throws for live.                                                                         | Phase 4 (`LiveHlsStrategy` behind the existing `PlaybackStrategy` seam, alongside the `PlaybackEngine` manifest-refresh rework it needs) |
+| **Player power features**                             | P1-5's quality/speed/caption-toggle subset only. No caption styling, chapters, storyboard scrub previews, SponsorBlock, PiP, mini-player, window modes, or the full §6 shortcut set.                             | Phase 4                                                                                                                                  |
+| **Shorts vertical viewer**                            | Shorts appear as cards and play on the normal watch page.                                                                                                                                                        | later (PRD §4, milestone 2+)                                                                                                             |
+| **Comment posting / sign-in**                         | Out of MVP scope entirely.                                                                                                                                                                                       | —                                                                                                                                        |
+| **Packaging / signing / auto-update**                 | CI builds all 3 OSes but publishes nothing; no `electron-builder` config yet.                                                                                                                                    | Phase 5                                                                                                                                  |
 
 ## Version pins that are load-bearing (plan F6 / R7)
 

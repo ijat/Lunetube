@@ -5,6 +5,7 @@ import { PlayerSurface } from '../../player/PlayerSurface.js';
 import type { PlaybackEngine } from '../../player/PlaybackEngine.js';
 import { useVideo } from '../../lib/queries.js';
 import { loopbackImage } from '../../lib/img.js';
+import { useRecentStore } from '../../stores/recentStore.js';
 import { WatchMeta } from './WatchMeta.js';
 import { DominantColorWash } from './DominantColorWash.js';
 import { UpNext } from './UpNext.js';
@@ -31,6 +32,20 @@ export function WatchRoute() {
   const { videoId } = useParams();
   const id = videoId ?? '';
   const { data: detail, error } = useVideo(id);
+  const recordVisit = useRecentStore((s) => s.recordVisit);
+
+  // Feed Home's session-scoped "Continue watching" shelf (plan P2-11 / A18).
+  // In-memory only — the renderer never owns durable state; Phase 3 swaps this
+  // for `db:history`.
+  useEffect(() => {
+    if (!detail) return;
+    recordVisit({
+      videoId: detail.id,
+      title: detail.title,
+      thumbnailUrl: detail.thumbnailUrl,
+      channel: detail.channel,
+    });
+  }, [detail, recordVisit]);
 
   const [engine, setEngine] = useState<PlaybackEngine | null>(null);
   const [started, setStarted] = useState(false);

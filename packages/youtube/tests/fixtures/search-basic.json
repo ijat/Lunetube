@@ -3,17 +3,17 @@
     "query": "lofi",
     "key": "lofi|relevance|any|any|all",
     "continuation": "search-page2",
-    "note": "Hand-authored. Mixed result kinds + one unknown node + one shelf."
+    "note": "Hand-authored. Mixed result kinds + one unknown node + one shelf. The first Video's id is `dQw4w9WgXcQ` so the Phase-2 e2e sweep can click it into a watch route that has both `video-dQw4w9WgXcQ.json` and comment fixtures."
   },
   "estimated_results": 1000000,
   "has_continuation": true,
   "results": [
     {
       "type": "Video",
-      "video_id": "abc12345678",
+      "video_id": "dQw4w9WgXcQ",
       "title": { "text": "Lofi Hip Hop Radio" },
       "thumbnails": [
-        { "url": "https://i.ytimg.com/vi/abc12345678/hqdefault.jpg", "width": 480, "height": 360 }
+        { "url": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", "width": 480, "height": 360 }
       ],
       "author": {
         "id": "UC1111111111111111111111",
