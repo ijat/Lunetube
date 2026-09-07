@@ -588,7 +588,15 @@ describe('ImageCache — LRU eviction and concurrency', () => {
       expect(await cache.store(key, 'image/webp', body(1500))).toBe(true);
 
       expect(cache.totalBytes).toBe(1500);
-      expect((await readdir(keyDir)).filter((n) => n.startsWith(key))).toEqual([`${key}.webp`]);
+      // The stale `<key>.jpg` is unlinked best-effort and unawaited by
+      // `#remember` ("a failure must not fail the store"), so under load it can
+      // still be on disk the instant `store()` resolves. The accounting above is
+      // already correct; poll for the filesystem to catch up (P2-11, test-only).
+      await expect
+        .poll(async () => (await readdir(keyDir)).filter((n) => n.startsWith(key)), {
+          timeout: 2000,
+        })
+        .toEqual([`${key}.webp`]);
 
       // A fresh instance scanning the directory must also count it exactly once.
       const reopened = new ImageCache({ dir: keyDir, maxBytes: 100_000 });

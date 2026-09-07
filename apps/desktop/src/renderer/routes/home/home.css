@@ -1,0 +1,64 @@
+/* Home (plan P2-11). A content surface, not chrome (ARCHITECTURE.md "Window
+ * materials / glass"): no backdrop-filter here — shelves are plain spacing over
+ * the transparent stage, cards bring their own --glass-* tint. */
+
+.home {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ---- fresh-install hero ---- */
+.home--hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-top: clamp(var(--space-6), 12vh, 160px);
+}
+
+.home__hero-title {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-display);
+  font-size: var(--text-2xl);
+  text-wrap: balance;
+  /* Large display type — no glass shadow (step P2-G). */
+  text-shadow: none;
+}
+
+.home__hero-sub {
+  color: var(--fg-2);
+  max-width: 52ch;
+  margin-bottom: var(--space-2);
+}
+
+/* ---- shelves ---- */
+.home__shelf {
+  margin-bottom: var(--space-7);
+}
+
+.home__shelf-title {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-display);
+  font-size: var(--text-lg);
+  text-wrap: balance;
+  text-shadow: none;
+  margin-bottom: var(--space-2);
+}
+
+.home__shelf-note {
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+}
+
+.home__shelf--placeholder {
+  border: 1px dashed var(--stroke-soft);
+  border-radius: var(--radius-panel);
+  padding: var(--space-5);
+}
+
+.home__shelf--placeholder .home__shelf-note {
+  margin-bottom: 0;
+}

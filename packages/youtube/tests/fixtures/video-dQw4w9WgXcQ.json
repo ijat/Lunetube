@@ -1,0 +1,79 @@
+{
+  "meta": {
+    "videoId": "dQw4w9WgXcQ",
+    "client": "IOS",
+    "recordedAt": "2026-09-08T00:00:00.000Z",
+    "note": "HAND-AUTHORED (plan P2-11). Exists so the Phase-2 e2e sweep (`tests/e2e/browse.spec.ts`) can click a search-result card into a watch route that actually renders comments: the comment fixtures (`comments-basic`/`comments-newest`) key on `dQw4w9WgXcQ|top`/`|newest`, and `CommentsSection` only mounts inside the watch route's `detail ?` branch. The channel id `UC1111111111111111111111` deliberately matches `channel-videos.json` / `channel-playlists.json` (Lofi Girl) and the pinned author in `comments-basic.json`, so a comment author link walks to a fixtured channel route. URLs are synthetic and redacted; no streaming_data because the sweep never presses play (P1-6 click-to-play)."
+  },
+  "playability_status": { "status": "OK", "reason": "" },
+  "basic_info": {
+    "id": "dQw4w9WgXcQ",
+    "title": "Lofi Hip Hop Radio — beats to relax/study to",
+    "channel_id": "UC1111111111111111111111",
+    "channel": {
+      "id": "UC1111111111111111111111",
+      "name": "Lofi Girl",
+      "url": "https://www.youtube.com/channel/UC1111111111111111111111"
+    },
+    "author": "Lofi Girl",
+    "short_description": "The lofi radio, back for another year.\n\nChapters:\n0:00 Intro\n2:13 Study block\n1:05:09 Late night block\n\nArtwork by a friend of the channel.",
+    "duration": 5400,
+    "view_count": 18400000,
+    "like_count": 640000,
+    "is_live": false,
+    "is_upcoming": false,
+    "category": "Music",
+    "keywords": ["lofi", "hip hop", "study", "relax"],
+    "thumbnail": [
+      {
+        "url": "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
+        "width": 1280,
+        "height": 720
+      }
+    ]
+  },
+  "primary_info": {
+    "published": "Jan 1, 2026",
+    "relative_date": "8 months ago"
+  },
+  "secondary_info": {
+    "description": "The lofi radio, back for another year.\n\nChapters:\n0:00 Intro\n2:13 Study block\n1:05:09 Late night block\n\nArtwork by a friend of the channel.",
+    "owner": {
+      "subscriber_count": "13.4M subscribers",
+      "author": {
+        "id": "UC1111111111111111111111",
+        "name": "Lofi Girl",
+        "thumbnails": [
+          { "url": "https://yt3.ggpht.com/lofigirl_s88.jpg", "width": 88, "height": 88 },
+          { "url": "https://yt3.ggpht.com/lofigirl_s176.jpg", "width": 176, "height": 176 }
+        ]
+      }
+    }
+  },
+  "watch_next_feed": [
+    {
+      "video_id": "page2vid0001",
+      "title": "Jazz Lofi — a slow morning",
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/page2vid0001/hqdefault.jpg", "width": 480, "height": 360 }
+      ],
+      "author": { "id": "UC5555555555555555555555", "name": "Night Owl Radio" },
+      "short_view_count": "2.1M views",
+      "published": "1 year ago",
+      "length_text": "1:14:22",
+      "is_live": false
+    },
+    {
+      "video_id": "shelfvid0001",
+      "title": "Rainy Day Piano",
+      "thumbnails": [
+        { "url": "https://i.ytimg.com/vi/shelfvid0001/hqdefault.jpg", "width": 480, "height": 360 }
+      ],
+      "author": { "id": "UC6666666666666666666666", "name": "Rainy Mood" },
+      "short_view_count": "780K views",
+      "published": "3 years ago",
+      "length_text": "2:59:00",
+      "is_live": false
+    }
+  ]
+}
