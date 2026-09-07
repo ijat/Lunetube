@@ -1,0 +1,331 @@
+/* Up-next rail + threaded comments (plan P2-10; mockup `.comm`, direction B,
+ * padded `0 30px`).
+ *
+ * PRD §7 is LOCKED: no monospace family appears in this file. Every number —
+ * like counts, view counts, durations, timestamps, the comment total — uses the
+ * body font plus the `.tnum` utility, exactly as `watch.css` and `cards.css` do.
+ *
+ * **Glass budget (A21 / P2-G).** Nothing here declares `backdrop-filter`. The
+ * app spends its two blur layers on the root backdrop and the chrome; comment
+ * rows are nested content and use flat alpha (`--surface-1` / `--glass-1`).
+ * Blurring a row inside a virtualized list would also re-composite on every
+ * scroll frame. Long-form reading copy on a tinted surface resets
+ * `text-shadow` to `none`, per the P2-G rule that `watch.css` applies to
+ * `.watch__desc`.
+ *
+ * **Nothing here may set a vertical margin on a virtualized row's content.**
+ * `VirtualList` measures each row's border box; a margin lives outside it and
+ * would make every row overlap the next by exactly the margin. Row gutters are
+ * `padding-bottom` on the row content instead.
+ */
+
+/* ---- Up next ---- */
+.upnext {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 30px 0;
+}
+
+.upnext__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upnext__row {
+  display: flex;
+  gap: 12px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.15s var(--ease);
+}
+.upnext__row:hover {
+  background: var(--surface-1);
+}
+.upnext__row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.upnext__row--skeleton {
+  pointer-events: none;
+}
+
+.upnext__thumb {
+  position: relative;
+  flex: none;
+  width: 152px;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgb(255 255 255 / 0.07), transparent 55%),
+    linear-gradient(160deg, #12213b 0%, #0b1220 45%, #0a0f18 100%);
+}
+.upnext__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.upnext__badge {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 5px;
+  color: var(--fg-bright);
+  background: rgb(8 10 15 / 0.78);
+}
+.upnext__badge--live {
+  color: #fff;
+  background: var(--err);
+}
+
+.upnext__text {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.upnext__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-size: 13px;
+  line-height: 1.34;
+  color: var(--fg-1);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.upnext__meta {
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+.upnext__skel {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--surface-2);
+}
+.upnext__skel--title {
+  height: 13px;
+  width: 72%;
+}
+
+/* ---- Comments ---- */
+.comments {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 30px 0;
+}
+
+.comments__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+.comments__total {
+  margin-left: 8px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.comments__head .lu-segmented {
+  margin-left: auto;
+}
+
+.comments__more {
+  display: flex;
+  justify-content: center;
+  padding-top: 10px;
+}
+
+/* ---- one comment ---- */
+.comment {
+  padding-bottom: 18px;
+}
+.comment[data-depth='1'] {
+  padding-left: 46px;
+  padding-bottom: 12px;
+  animation: comment-reveal 140ms var(--ease);
+}
+
+.comment__pinned {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-3);
+}
+
+.comment__body {
+  display: flex;
+  gap: 12px;
+}
+
+.comment__avatar {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.comment[data-depth='1'] .comment__avatar {
+  width: 26px;
+  height: 26px;
+}
+.comment__avatar--fallback {
+  background: conic-gradient(from 210deg, #6ba6f5, #5fd08a, var(--accent), #6ba6f5);
+  opacity: 0.7;
+}
+
+.comment__main {
+  min-width: 0;
+  flex: 1;
+}
+
+.comment__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 4px;
+}
+.comment__author-link {
+  color: inherit;
+  text-decoration: none;
+}
+.comment__author {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.comment__author-link:hover .comment__author {
+  text-decoration: underline;
+}
+/* Author highlighting (PRD §3.3): the uploader's own comments get an
+ * accent-tinted chip. Not an accent *fill* — PRD §7 forbids those. */
+.comment__author[data-uploader='true'] {
+  color: var(--accent);
+  background: rgb(var(--accent-rgb) / 0.14);
+  border-radius: 20px;
+  padding: 2px 9px;
+}
+.comment__verified {
+  flex: none;
+  color: var(--fg-3);
+}
+.comment__when {
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+.comment__text {
+  font-size: 12.5px;
+  line-height: 1.62;
+  color: var(--fg-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  /* Long-form reading copy — see the file header (P2-G / A21). */
+  text-shadow: none;
+}
+
+.comment__meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 7px;
+  font-size: 11.5px;
+  color: var(--fg-3);
+}
+.comment__likes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.comment__hearted {
+  display: inline-flex;
+  color: #f2708a;
+}
+
+/* ---- control rows (toggle / show-more / reply notes) ----
+ * The gutter is padding on `.comment__ctl`, never a margin on the row content —
+ * see the file header. */
+.comment__ctl {
+  display: flex;
+  padding: 0 0 10px 46px;
+}
+.comment__ctl--reply {
+  padding-left: 58px;
+  padding-bottom: 14px;
+}
+
+.comment__toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-control);
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.comment__toggle:hover {
+  background: rgb(var(--accent-rgb) / 0.1);
+}
+.comment__chev {
+  transition: transform 0.18s var(--ease);
+}
+.comment__chev[data-expanded='true'] {
+  transform: rotate(180deg);
+}
+
+.comment__reply-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.comment__reply-note--error {
+  color: var(--err);
+}
+
+/* A reply row fades in as its thread expands. It also runs when the virtualizer
+ * mounts a reply row during a scroll — with an overscan of 4 rows (~300px of
+ * lead) the 140ms fade has finished before the row reaches the viewport. */
+@keyframes comment-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comment[data-depth='1'] {
+    animation: none;
+  }
+  .comment__chev {
+    transition: none;
+  }
+  .upnext__row {
+    transition: none;
+  }
+}

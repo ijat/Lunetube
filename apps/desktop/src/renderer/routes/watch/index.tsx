@@ -7,12 +7,15 @@ import { useVideo } from '../../lib/queries.js';
 import { loopbackImage } from '../../lib/img.js';
 import { WatchMeta } from './WatchMeta.js';
 import { DominantColorWash } from './DominantColorWash.js';
-import { RelatedPlaceholder } from './RelatedPlaceholder.js';
+import { UpNext } from './UpNext.js';
+import { CommentsSection } from './CommentsSection.js';
 import './watch.css';
 
 /**
- * Direction B "Cinema" watch page (plan P1-6): a full-bleed player, then a meta
- * block padded `26px 30px 0`, then the Phase-2 comments / related placeholders.
+ * Direction B "Cinema" watch page (plan P1-6, completed by P2-10): a full-bleed
+ * player, then a meta block padded `26px 30px 0` (title / channel row /
+ * description), then the up-next rail, then threaded comments — one immersive
+ * column, because direction B hides the right-hand rail.
  * The living backdrop is re-tinted from the thumbnail's dominant colours.
  *
  * **The player mounts on the first play click, not on route entry.** Under
@@ -87,7 +90,17 @@ export function WatchRoute() {
       {detail ? (
         <>
           <WatchMeta detail={detail} onSeek={handleSeek} />
-          <RelatedPlaceholder />
+          <UpNext videoId={id} />
+          {/* Keyed on the video: a new video is a new thread set, so the
+              expansion map and every per-thread reply query must start empty
+              rather than be reset by an effect after a stale first render
+              (CommentsSection invariant I4). */}
+          <CommentsSection
+            key={id}
+            videoId={id}
+            uploaderName={detail.channel.name}
+            onSeek={handleSeek}
+          />
         </>
       ) : (
         <div className="watch__meta">
