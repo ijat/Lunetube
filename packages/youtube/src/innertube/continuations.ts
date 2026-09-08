@@ -20,9 +20,17 @@
  *    kind — F13's "two handles, one silently-newer object" is structurally
  *    impossible rather than merely avoided.
  *
- * TTL is 30 min and the cap is 100: Phase 2 has several concurrent continuation
- * kinds and reading a long comment thread for minutes before pressing "load
- * more" must not fail.
+ * TTL is 30 min and the cap is 1000: Phase 2 has several concurrent continuation
+ * kinds, and P2-5 mints one `replies-first:` handle **per comment thread that has
+ * replies** (~10-20 per comment page) — a stale-refetch of a multi-page comment
+ * query re-runs every page against fresh `Comments` objects, so identity dedupe
+ * does not apply and the mint count is `pages x threads`. A 100-slot cap let a
+ * few comment pages evict the reply handle for a thread still on screen
+ * ("This comment thread refreshed." on a visible click) and could cross-evict a
+ * `search:` / `channel:` handle for another mounted route. The cost of a slot is
+ * one `Map` entry, not a retained object graph: the parent `Comments` stored
+ * under the `comments:` handle already keeps all its `CommentThread`s alive, so
+ * the per-thread entries pin nothing new (F1).
  */
 import { randomUUID } from 'node:crypto';
 
@@ -56,7 +64,7 @@ export class ContinuationStore {
 
   constructor(opts: ContinuationStoreOptions = {}) {
     this.#ttlMs = opts.ttlMs ?? 30 * 60_000;
-    this.#cap = Math.max(1, opts.cap ?? 100);
+    this.#cap = Math.max(1, opts.cap ?? 1000);
     this.#now = opts.now ?? Date.now;
   }
 

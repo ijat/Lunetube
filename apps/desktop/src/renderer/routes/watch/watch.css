@@ -108,6 +108,12 @@
 .watch__chan-name {
   font-weight: 600;
   font-size: 13.5px;
+  color: inherit;
+  text-decoration: none;
+  display: inline-block;
+}
+a.watch__chan-name:hover {
+  text-decoration: underline;
 }
 .watch__chan-sub {
   color: var(--fg-3);

@@ -276,6 +276,24 @@ button {
   background: var(--surface-2);
   color: var(--fg-1);
 }
+.topbar__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  z-index: var(--z-menu);
+  margin: 0;
+  padding: 7px var(--space-3);
+  border-radius: var(--radius-panel);
+  border: var(--glass-hairline);
+  background: var(--glass-2);
+  backdrop-filter: blur(var(--blur-panel)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--blur-panel)) saturate(140%);
+  box-shadow: 0 24px 48px -16px rgb(0 0 0 / 0.5);
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+  text-shadow: none;
+}
 .topbar__nav {
   display: flex;
   gap: 2px;

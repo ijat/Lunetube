@@ -59,6 +59,21 @@ function tryUrl(raw: string): URL | null {
   }
 }
 
+/**
+ * `decodeURIComponent` that returns its input unchanged on malformed
+ * percent-encoding rather than throwing `URIError`. `new URL()` does not validate
+ * escapes in the path, so `youtu.be/%E0%A4%A` reaches here as `%E0%A4%A`; the
+ * subsequent `isValid*Id` checks then reject the garbage into `{ kind: 'unknown' }`
+ * as this module's contract promises (F6 — the parser must be total, no throw).
+ */
+function safeDecode(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 /** `"90"` / `"90s"` / `"1m30s"` / `"1h2m3s"` → seconds. `null` if unparseable. */
 function parseStartParam(url: URL): number | undefined {
   const raw = url.searchParams.get('t') ?? url.searchParams.get('start');
@@ -109,7 +124,7 @@ export function parseYouTubeUrl(raw: string): NavTarget | null {
 
   if (host === 'youtu.be') {
     const id = url.pathname.slice(1).split('/')[0] ?? '';
-    return video(decodeURIComponent(id), startSec) ?? unknown(trimmed);
+    return video(safeDecode(id), startSec) ?? unknown(trimmed);
   }
 
   const path = url.pathname;
@@ -121,7 +136,7 @@ export function parseYouTubeUrl(raw: string): NavTarget | null {
 
   const seg = /^\/(shorts|live|embed|v)\/([^/?#]+)/.exec(path);
   if (seg != null) {
-    return video(decodeURIComponent(seg[2] ?? ''), startSec) ?? unknown(trimmed);
+    return video(safeDecode(seg[2] ?? ''), startSec) ?? unknown(trimmed);
   }
 
   if (path === '/playlist') {
@@ -131,7 +146,7 @@ export function parseYouTubeUrl(raw: string): NavTarget | null {
 
   const chan = /^\/channel\/([^/?#]+)/.exec(path);
   if (chan != null) {
-    const id = decodeURIComponent(chan[1] ?? '');
+    const id = safeDecode(chan[1] ?? '');
     return isValidChannelId(id) ? { kind: 'channel', channelId: id } : unknown(trimmed);
   }
 

@@ -216,8 +216,14 @@ interface RawAboutWrapper {
  * with no scheme), unwrap YouTube's `/redirect?q=` wrapper, and always add a
  * scheme before returning. `null` when nothing usable is left. External —
  * never proxy-rewritten (plan P2-4: opened via `app:openExternal`).
+ *
+ * Every path — including the unwrapped `/redirect?q=` value — is re-run through
+ * `new URL()` and must resolve to `https:`; a `javascript:` / `file:` / `http:`
+ * or scheme-less `q` is rejected rather than passed to the DTO verbatim (S4).
+ * `app:openExternal` is https-only anyway, so a non-https link would only ever
+ * be a dead button.
  */
-function linkUrl(displayText: string, endpoint: unknown): string | null {
+function linkUrl(displayText: string, endpoint: unknown, depth = 0): string | null {
   const e = endpoint as { payload?: { url?: unknown }; metadata?: { url?: unknown } } | null;
   const fromEndpoint = e?.payload?.url ?? e?.metadata?.url;
   const raw =
@@ -226,10 +232,12 @@ function linkUrl(displayText: string, endpoint: unknown): string | null {
   const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
   try {
     const u = new URL(withScheme);
-    if (/(^|\.)youtube\.com$/.test(u.hostname) && u.pathname === '/redirect') {
+    if (depth === 0 && /(^|\.)youtube\.com$/.test(u.hostname) && u.pathname === '/redirect') {
       const q = u.searchParams.get('q');
-      if (q != null && q.length > 0) return q;
+      // Unwrap and re-normalise `q` rather than trusting it verbatim (S4).
+      return q != null && q.length > 0 ? linkUrl(q, null, depth + 1) : null;
     }
+    if (u.protocol !== 'https:') return null;
     return u.toString();
   } catch {
     return null;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { PlayerSurface } from '../../player/PlayerSurface.js';
 import type { PlaybackEngine } from '../../player/PlaybackEngine.js';
@@ -28,9 +28,23 @@ import './watch.css';
  * shows the poster first and sidesteps Chromium's autoplay policy. (P1-5 left
  * this exact trade-off to P1-6.)
  */
+
+/**
+ * `?t=` start-seconds from a shared link. `TopBar` emits `/watch/<id>?t=<n>` for
+ * a pasted `youtu.be/ID?t=90` (`map/url.ts#parseStartParam` did the parsing);
+ * this is the read side (F3). A positive finite integer, else ignored.
+ */
+function parseStartParam(raw: string | null): number | null {
+  if (raw === null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+}
+
 export function WatchRoute() {
   const { videoId } = useParams();
+  const [searchParams] = useSearchParams();
   const id = videoId ?? '';
+  const startAt = parseStartParam(searchParams.get('t'));
   const { data: detail, error } = useVideo(id);
   const recordVisit = useRecentStore((s) => s.recordVisit);
 
@@ -49,17 +63,18 @@ export function WatchRoute() {
 
   const [engine, setEngine] = useState<PlaybackEngine | null>(null);
   const [started, setStarted] = useState(false);
-  // A timestamp clicked from the poster state (no engine yet): remembered here
-  // and handed to `PlayerSurface` as its initial start time so the click is not
-  // silently discarded (F6).
+  // A timestamp clicked from the poster state (no engine yet), or a `?t=` from a
+  // shared link: remembered here and handed to `PlayerSurface` as its initial
+  // start time so it is not silently discarded (F3 / F6).
   const pendingSeekRef = useRef<number | null>(null);
 
-  // New video → back to the poster.
+  // New video (or a new `?t=`) → back to the poster, seeded with the link's
+  // start time if it carried one.
   useEffect(() => {
     setStarted(false);
     setEngine(null);
-    pendingSeekRef.current = null;
-  }, [id]);
+    pendingSeekRef.current = startAt;
+  }, [id, startAt]);
 
   const handleSeek = useCallback(
     (seconds: number) => {

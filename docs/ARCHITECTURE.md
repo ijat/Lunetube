@@ -112,8 +112,12 @@ handles**; main keeps a small TTL'd LRU so pagination still works.
 `packages/youtube/src/innertube/continuations.ts`. A handle is
 `` `${kind}:${uuid}` `` for `kind ∈ {search, comments, replies-first,
 replies-more, channel, playlist}`. The store is **main-side only and never
-persisted** — it is process memory with a **30 min TTL** and a **cap of 100**
-entries (LRU eviction). Properties that matter:
+persisted** — it is process memory with a **30 min TTL** and a **cap of 1000**
+entries (LRU eviction). The cap is sized for P2-5's mint rate: reply pagination
+mints one `replies-first:` handle per comment thread that has replies (~10-20 per
+comment page), and a stale-refetch re-runs every page, so a slot is cheap (one
+`Map` entry — the parent `Comments` already retains its threads). Properties that
+matter:
 
 - `get(kind, handle)` returns `undefined` unless the handle's prefix matches the
   channel's `kind`. Handles are untrusted renderer input (A9); feeding a

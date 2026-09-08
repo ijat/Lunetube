@@ -187,6 +187,54 @@ describe('mapAbout', () => {
     });
   });
 
+  it('unwraps a /redirect?q= link and re-normalises it to https (S4)', () => {
+    const raw = {
+      metadata: {
+        description: 'Links.',
+        links: [
+          {
+            title: { text: 'Site' },
+            link: {
+              text: 'redir',
+              endpoint: {
+                payload: {
+                  url: 'https://www.youtube.com/redirect?q=https%3A%2F%2Fexample.com%2Fx',
+                },
+              },
+            },
+          },
+        ],
+      },
+    };
+    expect(mapAbout(raw, 'fallback').links).toEqual([
+      { title: 'Site', url: 'https://example.com/x' },
+    ]);
+  });
+
+  it('drops a link that resolves to a non-https scheme (S4)', () => {
+    const raw = {
+      metadata: {
+        description: 'Links.',
+        links: [
+          {
+            title: { text: 'Bad' },
+            link: {
+              text: 'x',
+              endpoint: {
+                payload: { url: 'https://www.youtube.com/redirect?q=javascript%3Aalert(1)' },
+              },
+            },
+          },
+          {
+            title: { text: 'Insecure' },
+            link: { text: 'x', endpoint: { payload: { url: 'http://example.com/x' } } },
+          },
+        ],
+      },
+    };
+    expect(mapAbout(raw, 'fallback').links).toEqual([]);
+  });
+
   it('degrades to the fallback description with nulls and no links when raw is null', () => {
     expect(mapAbout(null, 'A small channel with no about tab.')).toEqual({
       description: 'A small channel with no about tab.',

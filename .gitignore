@@ -22,3 +22,7 @@ test-results/
 .env
 .env.*
 !.env.example
+
+# recorded fixture scratch output — scripts/record-fixtures.mjs writes these for
+# local inspection only; the committed fixtures are all hand-authored (security S2)
+packages/youtube/tests/fixtures/*-recorded.json

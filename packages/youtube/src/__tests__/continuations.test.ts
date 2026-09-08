@@ -100,6 +100,28 @@ describe('ContinuationStore', () => {
     expect(store.put('search', objB)).not.toBe(b);
   });
 
+  // F1 — the default cap must survive a realistic comment-browsing session:
+  // N comment pages, each minting one `comments:` handle plus ~20 per-thread
+  // `replies-first:` handles, must not evict page 1's reply handles.
+  it('keeps page-1 reply handles resolvable across many comment pages (default cap)', () => {
+    const store = new ContinuationStore();
+    const page1ReplyHandles: string[] = [];
+
+    for (let page = 0; page < 10; page += 1) {
+      store.put('comments', { page });
+      for (let thread = 0; thread < 20; thread += 1) {
+        const marker = { page, thread };
+        const handle = store.put('replies-first', marker);
+        if (page === 0) page1ReplyHandles.push(handle);
+      }
+    }
+
+    // 10 pages x 21 = 210 entries, well under the 1000 cap → nothing evicted.
+    for (const handle of page1ReplyHandles) {
+      expect(store.get('replies-first', handle)).toBeDefined();
+    }
+  });
+
   it('clear() drops every entry and resets identity dedupe', () => {
     const store = new ContinuationStore();
     const feed = { page: 1 };

@@ -74,7 +74,10 @@ export const CommentRow = memo(function CommentRow({
         <div className="comment__main">
           <p className="comment__head">
             {comment.author.id.length > 0 ? (
-              <Link className="comment__author-link" to={`/channel/${comment.author.id}`}>
+              <Link
+                className="comment__author-link"
+                to={`/channel/${encodeURIComponent(comment.author.id)}`}
+              >
                 {authorName}
               </Link>
             ) : (

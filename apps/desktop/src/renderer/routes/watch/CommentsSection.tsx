@@ -104,19 +104,25 @@ const ESTIMATE_ROW_HEIGHT = 104;
  * With a stable `getItemKey` the splice itself does not move the clicked row:
  * rows are laid out from the top, so inserting replies *after* the toggle row
  * changes only the offsets of rows below it. The anchor covers what is left
- * over — the browser clamping `scrollTop` when a collapse shrinks the document
- * under a viewport that was near the bottom, and the extra commits react-virtual
- * emits as the freshly mounted reply rows are measured and the total size
- * settles. Those all land within a few frames of the click, which is why the
- * budget is a small fixed number of commits rather than a condition that could
- * keep the anchor armed across a slow reply fetch and then yank the user back
- * after they had scrolled somewhere else.
+ * over — chiefly the browser clamping `scrollTop` when a collapse shrinks the
+ * document under a viewport that was near the bottom.
+ *
+ * The armed effect below has no dependency array, so it fires on every render of
+ * *this* component while armed — the `setExpanded` commit plus the
+ * `setReplyStates` mirror commits `ReplyLoader` pushes up as reply pages land.
+ * It does **not** see react-virtual's internal measurement commits: the
+ * virtualizer's state lives inside `VirtualList`, and a measurement-driven update
+ * re-renders that child alone, not this parent. So the budget is a small fixed
+ * number of *`CommentsSection`* renders following the click, not frames spanning
+ * a measurement settle — enough to catch those state commits without staying
+ * armed across a slow reply fetch and then yanking the user back after they had
+ * scrolled away.
  *
  * In the Chromium harness above the correction was a no-op on every expand and
- * every collapse (`delta === 0`, `scrollTop` unchanged at 959) — which is the
- * predicted result, not a sign the code is dead: it is the residual cases it is
- * there for, and a no-op that costs one `getBoundingClientRect` on four commits
- * is the right price for them.
+ * every collapse (`delta === 0`, `scrollTop` unchanged at 959) — the predicted
+ * result, not a sign the code is dead: it is the residual `scrollTop`-clamp case
+ * it is there for, and a no-op that costs one `getBoundingClientRect` per armed
+ * commit is the right price.
  */
 const ANCHOR_COMMITS = 4;
 
@@ -304,8 +310,9 @@ export function CommentsSection({ videoId, uploaderName, onSeek }: CommentsSecti
     [sort],
   );
 
-  // I5. Runs on every commit while the anchor is armed — including the commits
-  // react-virtual drives as it measures the newly mounted rows.
+  // I5. No deps → runs after every render of this component while the anchor is
+  // armed (the `setExpanded` / `setReplyStates` commits — not react-virtual's
+  // measurement commits, which re-render `VirtualList` only; see ANCHOR_COMMITS).
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
     if (anchor === null) return;
