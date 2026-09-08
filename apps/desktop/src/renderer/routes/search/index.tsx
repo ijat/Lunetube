@@ -19,6 +19,7 @@ import {
 import { EmptyState } from '../../components/EmptyState.js';
 import { ErrorState } from '../../components/ErrorState.js';
 import { VirtualGrid } from '../../components/VirtualGrid.js';
+import { useInfiniteScrollSentinel } from '../../components/useInfiniteScrollSentinel.js';
 import { isStaleContinuation, useSearch } from '../../lib/queries.js';
 import { activeFilterEntries, SearchFilterBar } from './SearchFilterBar.js';
 import './search.css';
@@ -86,23 +87,7 @@ export function SearchRoute() {
   const result = useSearch(q, filters);
   const { hasNextPage, isFetchingNextPage, fetchNextPage, refetch } = result;
 
-  // Callback ref (not a `useEffect` + stored ref) so the observer attaches the
-  // instant the sentinel mounts — it only renders in the "has more, no error"
-  // branch below, so a ref+effect pair keyed on mount would need its own
-  // dependency dance for no benefit.
-  const sentinelRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      if (!el || typeof IntersectionObserver === 'undefined') return undefined;
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0]?.isIntersecting) void fetchNextPage();
-      });
-      observer.observe(el);
-      // React 19 ref-callback cleanup — runs on unmount/detach or when
-      // `fetchNextPage`'s identity changes and this callback is recreated.
-      return () => observer.disconnect();
-    },
-    [fetchNextPage],
-  );
+  const sentinelRef = useInfiniteScrollSentinel(() => void fetchNextPage());
 
   if (!q) {
     return (

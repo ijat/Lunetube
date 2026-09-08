@@ -6,6 +6,7 @@ import { CardSkeleton, PlaylistCard, VideoCard } from '../../components/cards/in
 import { EmptyState } from '../../components/EmptyState.js';
 import { ErrorState } from '../../components/ErrorState.js';
 import { VirtualGrid } from '../../components/VirtualGrid.js';
+import { useInfiniteScrollSentinel } from '../../components/useInfiniteScrollSentinel.js';
 import { isStaleContinuation, useChannel } from '../../lib/queries.js';
 import { AboutTab } from './AboutTab.js';
 import { ChannelHeader } from './ChannelHeader.js';
@@ -78,21 +79,7 @@ export function ChannelRoute() {
   const result = useChannel(channelId, tab);
   const { hasNextPage, isFetchingNextPage, fetchNextPage, refetch } = result;
 
-  // Callback ref (not a `useEffect` + stored ref), same idiom as
-  // `search/index.tsx` — it only renders in the "has more, no error" branch
-  // below, so a ref+effect pair keyed on mount would need its own dependency
-  // dance for no benefit.
-  const sentinelRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      if (!el || typeof IntersectionObserver === 'undefined') return undefined;
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0]?.isIntersecting) void fetchNextPage();
-      });
-      observer.observe(el);
-      return () => observer.disconnect();
-    },
-    [fetchNextPage],
-  );
+  const sentinelRef = useInfiniteScrollSentinel(() => void fetchNextPage());
 
   if (!channelId) {
     return (

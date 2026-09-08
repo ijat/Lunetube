@@ -169,8 +169,13 @@ is a network hop considered — a `/@handle` / `/c/` / `/user/` path returns
 **re-validates** the returned `videoId` / `playlistId` / `browseId`. A
 non-allow-listed host returns `{ kind: 'unknown' }` with **no network at all**;
 a bare phrase returns `{ kind: 'search' }`. The renderer's paste-a-URL path
-falls through `unknown` / `search` / any thrown error to an ordinary search —
-never a dead end.
+(`shell/TopBar.tsx`) honours `video` / `channel` / `playlist` / `search`, but a
+URL-shaped string that comes back `{ kind: 'unknown' }` — or that fails
+resolution — shows an inline "That doesn't look like a YouTube link" note and
+**stops**: it is never re-issued as a verbatim YouTube search, which would
+egress the whole URL (path + query) to Google (security S5). A scheme-less
+string the resolver hands straight back as `{ kind: 'search', query: <the input
+verbatim> }` is treated the same way (security S6).
 
 ## Media path (Phase 1, design fixed now)
 
