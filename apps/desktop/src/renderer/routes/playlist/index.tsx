@@ -1,9 +1,10 @@
-import { useCallback, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Button, Skeleton } from '@lunetube/design';
 import { formatCompactCount, formatDuration, type VideoSummary } from '@lunetube/shared';
 import { EmptyState } from '../../components/EmptyState.js';
 import { ErrorState } from '../../components/ErrorState.js';
+import { useInfiniteScrollSentinel } from '../../components/useInfiniteScrollSentinel.js';
 import { VirtualList } from '../../components/VirtualList.js';
 import { loopbackImage } from '../../lib/img.js';
 import { isStaleContinuation, usePlaylist } from '../../lib/queries.js';
@@ -63,18 +64,7 @@ export function PlaylistRoute() {
   const result = usePlaylist(playlistId);
   const { hasNextPage, isFetchingNextPage, fetchNextPage, refetch } = result;
 
-  // Callback ref, same idiom as `search/index.tsx` / `channel/index.tsx`.
-  const sentinelRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      if (!el || typeof IntersectionObserver === 'undefined') return undefined;
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0]?.isIntersecting) void fetchNextPage();
-      });
-      observer.observe(el);
-      return () => observer.disconnect();
-    },
-    [fetchNextPage],
-  );
+  const sentinelRef = useInfiniteScrollSentinel(() => void fetchNextPage());
 
   if (!playlistId) {
     return (

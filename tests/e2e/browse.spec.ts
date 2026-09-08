@@ -70,9 +70,12 @@ test('browse sweep: search → watch → comments → channel → home continue-
     await expect(page.locator('.search .card').first()).toBeVisible();
     expect(await monoOffenders(page, '.search')).toEqual([]);
 
-    // ---- "Load more" yields page 2 (or the sentinel auto-loaded it) ----
+    // ---- "Load more" yields page 2 ----
+    // The sentinel only auto-pages after a real scroll (useInfiniteScrollSentinel),
+    // so on this short fixture page the button is the load path and stays put
+    // until clicked — no check-then-act race with an auto-load.
     const loadMore = page.getByRole('button', { name: 'Load more' });
-    if ((await loadMore.count()) > 0) await loadMore.click();
+    await loadMore.click();
     await expect(loadMore).toHaveCount(0);
     await page.locator('.stage__content').evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
     await expect(page.getByText('Lofi Radio — Page 2 Result A')).toBeVisible();
@@ -109,7 +112,8 @@ test('browse sweep: search → watch → comments → channel → home continue-
 
     // ---- Videos tab paginates to page 2 ----
     const chLoadMore = page.locator('.channel__more').getByRole('button', { name: 'Load more' });
-    if ((await chLoadMore.count()) > 0) await chLoadMore.click();
+    await chLoadMore.click();
+    await expect(page.getByText('Lofi Radio 3')).toBeVisible();
     await expect(chLoadMore).toHaveCount(0);
 
     // ---- Playlists tab ----

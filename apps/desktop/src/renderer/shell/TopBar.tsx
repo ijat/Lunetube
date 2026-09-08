@@ -86,6 +86,18 @@ export function TopBar() {
           navigate(`/playlist/${encodeURIComponent(target.playlistId)}`);
           return;
         case 'search':
+          // If the resolver handed back exactly what we gave it, the string was
+          // never recognised as anything — a scheme-less LAN/appliance URL
+          // (`192.168.1.1/setup?pw=…`) fails `new URL()` and `map/url.ts`
+          // classifies it `{kind:'search', query: <the raw input>}` *before* the
+          // host allow-list is consulted. Searching for it would egress the
+          // whole path + query to Google (security S6). A real
+          // `youtube.com/results?search_query=` link always yields a `query`
+          // that differs from the raw input, so genuine searches are untouched.
+          if (target.query === raw) {
+            setNotALink(true);
+            return;
+          }
           goToSearch(target.query);
           return;
         case 'unknown':
