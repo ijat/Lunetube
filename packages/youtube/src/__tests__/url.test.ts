@@ -109,11 +109,20 @@ describe('parseYouTubeUrl — the SSRF-adjacent negative battery', () => {
     // U+043E CYRILLIC SMALL LETTER O in place of the Latin 'o's.
     'https://www.yоutube.com/watch?v=dQw4w9WgXcQ',
     'https://evil.com@www.youtube.com/watch?v=dQw4w9WgXcQ',
+    // Malformed percent-encoding in the path: `decodeURIComponent` throws
+    // `URIError` on this — the parser must stay total and degrade (F6).
+    'https://youtu.be/%E0%A4%A',
+    'https://www.youtube.com/channel/%C0%80',
+    'https://www.youtube.com/shorts/%',
   ];
 
   it.each(battery)('%s → { kind: "unknown" }', (raw) => {
     const result = parseYouTubeUrl(raw);
     expect(result?.kind).toBe('unknown');
+  });
+
+  it('does not throw on malformed percent-encoding', () => {
+    expect(() => parseYouTubeUrl('https://youtu.be/%E0%A4%A')).not.toThrow();
   });
 });
 

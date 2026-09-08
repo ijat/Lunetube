@@ -14,10 +14,20 @@
  * never committed without eyeballing the output for leaked tokens.
  *
  * Redaction: every googlevideo / timedtext URL is replaced with a synthetic one
- * that keeps only `expire` and `itag`; every ytimg / ggpht / googleusercontent
- * URL is stripped to `origin + pathname` (drops tracking params); `visitor_data`,
- * cookies, `po_token`, `cpn`, `signatureCipher`, `actions`/`session`/`client`
- * back-references and client IP params never reach disk.
+ * that keeps only `expire` and `itag`; **every other URL-shaped string is
+ * stripped to `origin + pathname`** (drops every query string and fragment, so
+ * no `params` / continuation / tracking token rides through on a URL);
+ * `visitor_data`, cookies, `po_token`, `cpn`, `signatureCipher`,
+ * `actions`/`session`/`client` back-references and client IP params never reach
+ * disk. The structural recorders (`--kind search|channel|playlist`) additionally
+ * drop, by key name, the InnerTube token fields (`params`, `continuation`,
+ * `token`, `ctoken`, `clickTrackingParams`, `trackingParams`,
+ * `serializedShareEntity`, `visitorData`) and the raw endpoint `payload` object
+ * (security S2 — these recorders deep-copy raw youtubei.js nodes, unlike the
+ * field-by-field `--kind video` / comments recorders).
+ *
+ * Recorded output (`*-recorded.json`) is `.gitignore`d and must never be
+ * committed — the checked-in fixtures are all hand-authored.
  *
  * **Comments carry third-party identity, so `--kind comments` redacts author
  * identity by default (plan A20).** Every commenter's `name`, channel `id` and
@@ -63,29 +73,63 @@ function redactUrl(raw) {
   }
 }
 
-/** ytimg / ggpht / googleusercontent → `origin + pathname` (drops query); else `redactUrl`. */
-function redactImageUrl(raw) {
+/**
+ * Any URL-shaped string → a safe form. googlevideo / timedtext keep their
+ * targeted redaction (`redactUrl`); ytimg / ggpht / googleusercontent and
+ * **every other host** are stripped to `origin + pathname` — no query string, no
+ * fragment, no userinfo — so a continuation / tracking token embedded in a URL
+ * cannot ride through (security S2).
+ */
+function redactAnyUrl(raw) {
   if (typeof raw !== 'string' || raw.length === 0) return raw;
   try {
     const url = new URL(raw);
-    if (/(^|\.)(ytimg\.com|ggpht\.com|googleusercontent\.com)$/.test(url.hostname)) {
-      return `${url.origin}${url.pathname}`;
+    if (
+      /\.googlevideo\.com$/.test(url.hostname) ||
+      (url.hostname === 'www.youtube.com' && url.pathname === '/api/timedtext')
+    ) {
+      return redactUrl(raw);
     }
-    return redactUrl(raw);
+    return `${url.origin}${url.pathname}`;
   } catch {
     return 'https://redacted.example/invalid';
   }
 }
 
 /**
+ * Key names dropped wholesale by `deepRedact`: youtubei.js session
+ * back-references plus every InnerTube token / continuation field and the raw
+ * endpoint `payload` object (security S2).
+ */
+const DROP_KEYS = new Set([
+  'actions',
+  'session',
+  'client',
+  'rt',
+  'params',
+  'continuation',
+  'token',
+  'ctoken',
+  'clickTrackingParams',
+  'trackingParams',
+  'serializedShareEntity',
+  'visitorData',
+  'visitor_data',
+  'sessionToken',
+  'session_token',
+  'payload',
+  'signatureCipher',
+]);
+
+/**
  * Structural deep copy with URL redaction, a recursion cap and a cycle guard —
- * used for the search/suggestions recorders, where the node shapes are deep and
- * varied. Drops the youtubei.js back-reference keys that would otherwise pull in
- * the whole session.
+ * used for the search/channel/playlist recorders, where the node shapes are deep
+ * and varied. Drops `DROP_KEYS` (session back-references + token fields) and
+ * strips every URL-shaped string to `origin + pathname`.
  */
 function deepRedact(value, seen = new WeakSet(), depth = 0) {
   if (value == null) return null;
-  if (typeof value === 'string') return /^https?:\/\//i.test(value) ? redactImageUrl(value) : value;
+  if (typeof value === 'string') return /^https?:\/\//i.test(value) ? redactAnyUrl(value) : value;
   if (typeof value === 'number' || typeof value === 'boolean') return value;
   if (typeof value !== 'object' || depth > 12) return undefined;
   if (seen.has(value)) return undefined;
@@ -93,7 +137,7 @@ function deepRedact(value, seen = new WeakSet(), depth = 0) {
   if (Array.isArray(value)) return value.slice(0, 40).map((v) => deepRedact(v, seen, depth + 1));
   const out = {};
   for (const [key, v] of Object.entries(value)) {
-    if (key === 'actions' || key === 'session' || key === 'client' || key === 'rt') continue;
+    if (DROP_KEYS.has(key)) continue;
     const redacted = deepRedact(v, seen, depth + 1);
     if (redacted !== undefined) out[key] = redacted;
   }

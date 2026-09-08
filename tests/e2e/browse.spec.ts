@@ -12,7 +12,8 @@ const mainEntry = fileURLToPath(new URL('../../apps/desktop/out/main/index.js', 
  *
  *   type a query → suggestions → Enter → result cards → "Load more" → page 2 →
  *   click a card → watch route → comments → expand a thread → replies →
- *   click a channel name → channel route → Videos paginates → Playlists tab →
+ *   click the WatchMeta channel link → channel route → `page.goBack()` to watch →
+ *   forward to channel again → Videos paginates → Playlists tab →
  *   Home shows "Continue watching" with the video just visited.
  *
  * Throughout: **zero console errors**, and **no element computing to a
@@ -92,10 +93,18 @@ test('browse sweep: search → watch → comments → channel → home continue-
     await expect(page.locator('.comment[data-depth="1"]').first()).toBeVisible();
     expect(await monoOffenders(page, '.comments')).toEqual([]);
 
-    // ---- Click the channel name (a comment author link) → channel route ----
-    await page.locator('.comment[data-depth="0"] .comment__author-link').first().click();
+    // ---- WatchMeta channel link → channel route, then browser-back to watch (F4) ----
+    await page.locator('a.watch__chan-name').click();
     await expect(page.locator('.channel')).toBeVisible();
     await expect(page.locator('.chan-header').getByText('Lofi Girl')).toBeVisible();
+    await page.goBack();
+    await expect(page.getByTestId('watch-title')).toHaveText(
+      'Lofi Hip Hop Radio — beats to relax/study to',
+    );
+
+    // ---- Forward into the channel again to sweep its tabs ----
+    await page.locator('a.watch__chan-name').click();
+    await expect(page.locator('.channel')).toBeVisible();
     await expect(page.locator('.channel .card').first()).toBeVisible();
 
     // ---- Videos tab paginates to page 2 ----

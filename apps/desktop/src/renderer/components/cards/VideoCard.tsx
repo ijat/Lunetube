@@ -49,6 +49,9 @@ export function VideoCard({ video }: VideoCardProps) {
         <div className="card__text">
           <div className="card__title">{video.title}</div>
           <div className="card__meta">
+            {/* Plain text, not a link to the channel: the whole card is already
+                the <Link> and an <a> cannot nest inside another <a> (F4). The
+                watch page's WatchMeta channel name carries that link instead. */}
             <span>{video.channel.name || 'Unknown channel'}</span>
             {video.viewCount !== null && (
               <>

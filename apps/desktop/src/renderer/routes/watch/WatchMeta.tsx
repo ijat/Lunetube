@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { VideoDetail } from '@lunetube/shared';
 import { formatCompactCount } from '@lunetube/shared';
 import { Button } from '@lunetube/design';
@@ -55,7 +56,16 @@ export function WatchMeta({ detail, onSeek }: WatchMetaProps) {
             <div className="watch__av watch__av--fallback" aria-hidden="true" />
           )}
           <div>
-            <div className="watch__chan-name">{detail.channel.name || 'Unknown channel'}</div>
+            {detail.channel.id.length > 0 ? (
+              <Link
+                className="watch__chan-name"
+                to={`/channel/${encodeURIComponent(detail.channel.id)}`}
+              >
+                {detail.channel.name || 'Unknown channel'}
+              </Link>
+            ) : (
+              <div className="watch__chan-name">{detail.channel.name || 'Unknown channel'}</div>
+            )}
             {detail.publishedText && (
               <div className="watch__chan-sub tnum">{detail.publishedText}</div>
             )}
