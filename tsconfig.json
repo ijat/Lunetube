@@ -3,6 +3,7 @@
   "references": [
     { "path": "./tsconfig.tools.json" },
     { "path": "./packages/shared" },
+    { "path": "./packages/db" },
     { "path": "./packages/design" },
     { "path": "./packages/youtube" },
     { "path": "./apps/desktop" },

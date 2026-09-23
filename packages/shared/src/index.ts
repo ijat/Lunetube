@@ -12,3 +12,6 @@ export * from './models/search.js';
 export * from './models/stream.js';
 export * from './models/settings.js';
 export * from './models/window.js';
+export * from './models/library.js';
+export * from './models/libraryExport.js';
+export * from './models/uploads.js';
