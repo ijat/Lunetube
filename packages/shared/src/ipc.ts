@@ -5,11 +5,24 @@ import type { VideoDetail, VideoSummary } from './models/video.js';
 import type { StreamManifest, StreamPrefs } from './models/stream.js';
 import type { Settings } from './models/settings.js';
 import type { WindowState } from './models/window.js';
-import type { ChannelTab } from './models/channel.js';
+import type { ChannelRef, ChannelTab } from './models/channel.js';
 import type { ChannelPage } from './models/channelPage.js';
 import type { Comment, CommentPage, CommentSort } from './models/comment.js';
 import type { PlaylistDetail } from './models/playlist.js';
 import type { SearchFilters, SearchPage } from './models/search.js';
+import type {
+  DbScope,
+  DbStatus,
+  ExportResult,
+  FollowedChannel,
+  FeedPage,
+  HistoryPage,
+  ImportResult,
+  LocalPlaylistDetail,
+  LocalPlaylistSummary,
+  QueueAddMode,
+  QueueState,
+} from './models/library.js';
 
 /**
  * Single source of truth for IPC channel names. Main and preload both import
@@ -17,8 +30,8 @@ import type { SearchFilters, SearchPage } from './models/search.js';
  *
  * Channels are added phase by phase; the `IpcRequests` / `IpcResponses` maps
  * below are the strongly-typed surface and grow alongside. See the plan's IPC
- * table for the full roadmap (search/comments/channel = Phase 2, db:* = Phase 3,
- * sb:* + win:setMode = Phase 4, update:* = Phase 5).
+ * table for the full roadmap (search/comments/channel = Phase 2, db:* / feed:* =
+ * Phase 3, sb:* + win:setMode = Phase 4, update:* = Phase 5).
  */
 export const CHANNELS = {
   ytVideo: 'yt:video',
@@ -36,12 +49,40 @@ export const CHANNELS = {
   appSetSettings: 'app:setSettings',
   appOpenExternal: 'app:openExternal',
   winGetState: 'win:getState',
+  dbStatus: 'db:status',
+  dbHistoryList: 'db:history.list',
+  dbHistoryRecord: 'db:history.record',
+  dbHistoryProgress: 'db:history.progress',
+  dbHistoryRemove: 'db:history.remove',
+  dbHistoryClear: 'db:history.clear',
+  dbPlaylistsList: 'db:playlists.list',
+  dbPlaylistsGet: 'db:playlists.get',
+  dbPlaylistsCreate: 'db:playlists.create',
+  dbPlaylistsRename: 'db:playlists.rename',
+  dbPlaylistsDelete: 'db:playlists.delete',
+  dbPlaylistsAddItem: 'db:playlists.addItem',
+  dbPlaylistsRemoveItem: 'db:playlists.removeItem',
+  dbPlaylistsMoveItem: 'db:playlists.moveItem',
+  dbPlaylistsMembership: 'db:playlists.membership',
+  dbFollowsList: 'db:follows.list',
+  dbFollowsAdd: 'db:follows.add',
+  dbFollowsRemove: 'db:follows.remove',
+  dbQueueGet: 'db:queue.get',
+  dbQueueAdd: 'db:queue.add',
+  dbQueueRemove: 'db:queue.remove',
+  dbQueueMove: 'db:queue.move',
+  dbQueueClear: 'db:queue.clear',
+  dbQueueSetCurrent: 'db:queue.setCurrent',
+  dbExport: 'db:export',
+  dbImport: 'db:import',
+  feedLatest: 'feed:latest',
 } as const;
 
 export const EVENT_CHANNELS = {
   winStateChanged: 'win:stateChanged',
   ytHealth: 'yt:health',
   playerRemoteCommand: 'player:remoteCommand',
+  dbChanged: 'db:changed',
 } as const;
 
 /** invoke: channel -> request payload */
@@ -63,6 +104,38 @@ export interface IpcRequests {
   'app:setSettings': { patch: Partial<Settings> };
   'app:openExternal': { url: string };
   'win:getState': Record<string, never>;
+  'db:status': Record<string, never>;
+  'db:history.list': {
+    query?: string;
+    limit?: number;
+    cursor?: string;
+    incompleteOnly?: boolean;
+  };
+  'db:history.record': { video: VideoSummary };
+  'db:history.progress': { videoId: string; positionSec: number; durationSec: number | null };
+  'db:history.remove': { videoId: string };
+  'db:history.clear': Record<string, never>;
+  'db:playlists.list': Record<string, never>;
+  'db:playlists.get': { playlistId: string };
+  'db:playlists.create': { name: string };
+  'db:playlists.rename': { playlistId: string; name: string };
+  'db:playlists.delete': { playlistId: string };
+  'db:playlists.addItem': { playlistId: string; video: VideoSummary };
+  'db:playlists.removeItem': { playlistId: string; videoId: string };
+  'db:playlists.moveItem': { playlistId: string; videoId: string; toIndex: number };
+  'db:playlists.membership': { videoId: string };
+  'db:follows.list': Record<string, never>;
+  'db:follows.add': { channel: ChannelRef & { handle?: string } };
+  'db:follows.remove': { channelId: string };
+  'db:queue.get': Record<string, never>;
+  'db:queue.add': { videos: VideoSummary[]; mode: QueueAddMode };
+  'db:queue.remove': { videoId: string };
+  'db:queue.move': { videoId: string; toIndex: number };
+  'db:queue.clear': Record<string, never>;
+  'db:queue.setCurrent': { videoId: string | null };
+  'db:export': Record<string, never>;
+  'db:import': Record<string, never>;
+  'feed:latest': { limit?: number; refresh?: boolean };
 }
 
 /** invoke: channel -> response value (always wrapped in Result at the boundary) */
@@ -82,6 +155,33 @@ export interface IpcResults {
   'app:setSettings': Settings;
   'app:openExternal': void;
   'win:getState': WindowState;
+  'db:status': DbStatus;
+  'db:history.list': HistoryPage;
+  'db:history.record': void;
+  'db:history.progress': void;
+  'db:history.remove': void;
+  'db:history.clear': void;
+  'db:playlists.list': LocalPlaylistSummary[];
+  'db:playlists.get': LocalPlaylistDetail;
+  'db:playlists.create': LocalPlaylistSummary;
+  'db:playlists.rename': void;
+  'db:playlists.delete': void;
+  'db:playlists.addItem': { added: boolean };
+  'db:playlists.removeItem': void;
+  'db:playlists.moveItem': void;
+  'db:playlists.membership': string[];
+  'db:follows.list': FollowedChannel[];
+  'db:follows.add': void;
+  'db:follows.remove': void;
+  'db:queue.get': QueueState;
+  'db:queue.add': QueueState;
+  'db:queue.remove': QueueState;
+  'db:queue.move': QueueState;
+  'db:queue.clear': QueueState;
+  'db:queue.setCurrent': QueueState;
+  'db:export': ExportResult;
+  'db:import': ImportResult;
+  'feed:latest': FeedPage;
 }
 
 export type IpcChannel = keyof IpcRequests;
@@ -93,6 +193,7 @@ export interface IpcEvents {
   'win:stateChanged': WindowState;
   'yt:health': { degraded: boolean; reason: string | null };
   'player:remoteCommand': { command: 'playpause' | 'next' | 'previous' | 'stop' };
+  'db:changed': { scope: DbScope };
 }
 
 export type IpcEventChannel = keyof IpcEvents;
