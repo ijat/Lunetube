@@ -4,6 +4,7 @@ packages:
 
 allowBuilds:
   '@swc/core': true
+  better-sqlite3: false
   esbuild: true
   electron: true
 

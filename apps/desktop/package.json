@@ -9,8 +9,12 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc -b"
   },
+  "dependencies": {
+    "better-sqlite3": "13.0.3"
+  },
   "devDependencies": {
     "@electron-toolkit/utils": "^4.0.0",
+    "@lunetube/db": "workspace:*",
     "@lunetube/design": "workspace:*",
     "@lunetube/shared": "workspace:*",
     "@lunetube/youtube": "workspace:*",

@@ -8,6 +8,10 @@
     "moduleResolution": "bundler",
     "noEmit": true
   },
-  "references": [{ "path": "../../packages/shared" }, { "path": "../../packages/youtube" }],
+  "references": [
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/db" },
+    { "path": "../../packages/youtube" }
+  ],
   "include": ["src/main/**/*", "src/preload/**/*", "electron.vite.config.ts"]
 }
